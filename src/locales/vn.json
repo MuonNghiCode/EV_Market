@@ -212,6 +212,9 @@
       "auctionRejected": "Đấu giá bị từ chối",
       "auctionActive": "Đấu giá đang diễn ra",
       "auctionEnded": "Phiên đấu giá đã kết thúc",
+      "requestAuction": "Yêu cầu đấu giá",
+      "auctionTab": "Đấu giá",
+      "auctionLive": "Đang đấu giá",
       "form": {
         "title": "Tiêu đề",
         "titlePlaceholder": "Nhập tiêu đề xe/pin",
