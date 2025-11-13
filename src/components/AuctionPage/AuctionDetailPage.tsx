@@ -17,6 +17,7 @@ import {
   Loader2,
   ArrowLeft,
   Info,
+  ShoppingCart,
 } from "lucide-react";
 import { LiveAuction } from "@/types/auction";
 import {
@@ -34,6 +35,7 @@ import { useI18nContext } from "@/providers/I18nProvider";
 import { useToast } from "@/providers/ToastProvider";
 import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { supabase } from "@/lib/supabase";
+import { getCurrentUserId } from "@/services/Auth";
 
 interface AuctionDetailPageProps {
   auctionId: string;
@@ -181,6 +183,9 @@ export default function AuctionDetailPage({
   const [hasDeposit, setHasDeposit] = useState(false);
   const [currentBid, setCurrentBid] = useState(0);
   const [isNewBidFlash, setIsNewBidFlash] = useState(false);
+  const [isAutoBidEnabled, setIsAutoBidEnabled] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"WALLET" | "MOMO">("WALLET");
 
   const [activeTab, setActiveTab] = useState<"details" | "specs" | "bids">(
     "details"
@@ -189,9 +194,18 @@ export default function AuctionDetailPage({
   // Check if auction has started
   const isAuctionStarted = () => {
     if (!auction?.auctionStartsAt) return true; // Default to true if no start time
-    // Remove 'Z' to parse as local time
-    return new Date() >= new Date(auction.auctionStartsAt.replace("Z", ""));
+    // Parse as UTC time (keep 'Z') to match backend validation
+    return new Date() >= new Date(auction.auctionStartsAt);
   };
+
+  // Fetch current user ID
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const userId = await getCurrentUserId();
+      setCurrentUserId(userId);
+    };
+    fetchUserId();
+  }, []);
 
   useEffect(() => {
     const fetchAuctionDetail = async () => {
@@ -264,9 +278,9 @@ export default function AuctionDetailPage({
     if (!auction) return;
 
     const timer = setInterval(() => {
-      // Parse auction times như local time (remove 'Z' để không bị convert timezone)
-      const startTime = new Date(auction.auctionStartsAt.replace("Z", ""));
-      const endTime = new Date(auction.auctionEndsAt.replace("Z", ""));
+      // Parse auction times as UTC (keep 'Z' to match backend)
+      const startTime = new Date(auction.auctionStartsAt);
+      const endTime = new Date(auction.auctionEndsAt);
       const now = new Date();
 
       // If auction hasn't started yet, countdown to start time
@@ -332,6 +346,23 @@ export default function AuctionDetailPage({
             setIsNewBidFlash(true);
             setTimeout(() => setIsNewBidFlash(false), 2000);
 
+            // Auto-bid logic: if enabled and not our own bid, automatically place next bid
+            if (isAutoBidEnabled && hasDeposit && newBid.bidderId !== currentUserId && auction && auction.listingType) {
+              const nextBidAmount = newBidAmount + auction.bidIncrement;
+              console.log("🤖 Auto-bidding enabled, placing bid:", nextBidAmount);
+              
+              // Place bid automatically after a short delay
+              setTimeout(async () => {
+                try {
+                  await placeBid(auction.listingType!, auction.id, { amount: nextBidAmount });
+                  console.log("✅ Auto-bid placed successfully");
+                } catch (error) {
+                  console.error("❌ Auto-bid failed:", error);
+                  // Silently fail - user can still manually bid
+                }
+              }, 500);
+            }
+
             // Update the bid input to next increment using the current auction data
             setAuction((prev) => {
               if (!prev) return prev;
@@ -382,7 +413,7 @@ export default function AuctionDetailPage({
       console.log("🧹 Cleaning up realtime subscription");
       supabase.removeChannel(channel);
     };
-  }, [auctionId, auction?.listingType]); // Depend on auctionId and listingType
+  }, [auctionId, auction?.listingType, isAutoBidEnabled, hasDeposit, currentUserId]); // Depend on auctionId, listingType, and auto-bid state
 
   const handlePayDeposit = async () => {
     if (!auction || !auction.listingType) return;
@@ -498,7 +529,7 @@ export default function AuctionDetailPage({
     }
   };
 
-  const handlePayAuction = async (transactionId: string) => {
+  const handlePayAuction = async (transactionId: string, paymentMethod: "WALLET" | "MOMO") => {
     try {
       setIsPayingAuction(true);
 
@@ -508,10 +539,11 @@ export default function AuctionDetailPage({
         auctionTitle: auction?.title,
         finalPrice: currentBid || auction?.startingPrice,
         userAuctionResult: auction?.userAuctionResult,
+        paymentMethod,
       });
 
       const response = await payAuctionTransaction(transactionId, {
-        paymentMethod: "WALLET",
+        paymentMethod,
       });
 
       console.log("✅ Payment response:", response);
@@ -530,7 +562,7 @@ export default function AuctionDetailPage({
           "🔗 Redirecting to payment gateway:",
           response.data.paymentDetail.payUrl
         );
-        // Redirect to payment gateway
+        // Redirect to payment gateway (for MOMO)
         window.location.href = response.data.paymentDetail.payUrl;
       }
     } catch (error) {
@@ -1205,6 +1237,55 @@ export default function AuctionDetailPage({
                           </div>
                         </motion.div>
 
+                        {/* Payment method selector */}
+                        <div className="space-y-3">
+                          <p className="text-sm font-semibold text-slate-700">
+                            {t("auctions.selectPaymentMethod", "Chọn phương thức thanh toán")}
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <motion.button
+                              onClick={() => setSelectedPaymentMethod("WALLET")}
+                              className={`p-3 rounded-xl border-2 transition-all ${
+                                selectedPaymentMethod === "WALLET"
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-slate-200 bg-white hover:border-blue-300"
+                              }`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Wallet className={`w-6 h-6 mx-auto mb-1 ${
+                                selectedPaymentMethod === "WALLET" ? "text-blue-600" : "text-slate-400"
+                              }`} />
+                              <p className={`text-xs font-bold ${
+                                selectedPaymentMethod === "WALLET" ? "text-blue-900" : "text-slate-600"
+                              }`}>
+                                {t("checkout.wallet", "Ví")}
+                              </p>
+                            </motion.button>
+                            <motion.button
+                              onClick={() => setSelectedPaymentMethod("MOMO")}
+                              className={`p-3 rounded-xl border-2 transition-all ${
+                                selectedPaymentMethod === "MOMO"
+                                  ? "border-pink-500 bg-pink-50"
+                                  : "border-slate-200 bg-white hover:border-pink-300"
+                              }`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center font-bold text-sm ${
+                                selectedPaymentMethod === "MOMO" ? "bg-pink-600 text-white" : "bg-slate-200 text-slate-500"
+                              }`}>
+                                M
+                              </div>
+                              <p className={`text-xs font-bold ${
+                                selectedPaymentMethod === "MOMO" ? "text-pink-900" : "text-slate-600"
+                              }`}>
+                                MoMo
+                              </p>
+                            </motion.button>
+                          </div>
+                        </div>
+
                         <motion.button
                           onClick={async () => {
                             try {
@@ -1230,7 +1311,7 @@ export default function AuctionDetailPage({
                                 return;
                               }
 
-                              await handlePayAuction(transaction.id);
+                              await handlePayAuction(transaction.id, selectedPaymentMethod);
                             } catch (error) {
                               console.error("Payment error:", error);
                             } finally {
@@ -1250,7 +1331,7 @@ export default function AuctionDetailPage({
                           ) : (
                             <>
                               <Wallet className="w-5 h-5" />
-                              {t("auctions.payNow", "Thanh toán ngay")}
+                              {t("auctions.payNow", "Thanh toán ngay")} - {selectedPaymentMethod === "WALLET" ? t("checkout.wallet", "Ví") : "MoMo"}
                             </>
                           )}
                         </motion.button>
@@ -1416,10 +1497,56 @@ export default function AuctionDetailPage({
                       </div>
                     </motion.div>
 
+                    {/* Auto-bid checkbox */}
+                    <motion.div
+                      className="flex items-center gap-3 p-3 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <input
+                        type="checkbox"
+                        id="auto-bid"
+                        checked={isAutoBidEnabled}
+                        onChange={(e) => setIsAutoBidEnabled(e.target.checked)}
+                        className="w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500 cursor-pointer"
+                      />
+                      <label htmlFor="auto-bid" className="text-sm font-semibold text-purple-900 cursor-pointer flex-1">
+                        🤖 {t("auctions.autoBid", "Tự động đấu giá")}
+                      </label>
+                      {isAutoBidEnabled && (
+                        <motion.span
+                          className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full font-bold"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                        >
+                          ON
+                        </motion.span>
+                      )}
+                    </motion.div>
+
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">
                         {t("auctions.bidAmount")}
                       </label>
+                      
+                      {/* Quick multiply buttons */}
+                      <div className="grid grid-cols-4 gap-2 mb-3">
+                        {[2, 3, 5, 10].map((multiplier) => (
+                          <motion.button
+                            key={multiplier}
+                            onClick={() => {
+                              const newAmount = currentBid * multiplier;
+                              bidAmountInput.setValue(String(newAmount));
+                            }}
+                            className="py-2 px-3 bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-700 font-bold text-sm rounded-xl border border-indigo-200 transition-all shadow-sm"
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            ×{multiplier}
+                          </motion.button>
+                        ))}
+                      </div>
+
                       <div className="relative">
                         <input
                           type="text"
@@ -1463,6 +1590,25 @@ export default function AuctionDetailPage({
                         </>
                       )}
                     </motion.button>
+
+                    {/* Buy Now button */}
+                    {!timeLeft.isExpired && auction.price && (
+                      <motion.button
+                        onClick={() => {
+                          router.push(
+                            `/checkout?listingId=${auction.id}&listingType=${auction.listingType}`
+                          );
+                        }}
+                        className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        {t("auctions.buyNow", "Mua đứt")} - {formatAuctionPrice(auction.price)}
+                      </motion.button>
+                    )}
                   </>
                 )}
 

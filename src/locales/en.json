@@ -216,6 +216,9 @@
       "auctionRejected": "Auction Rejected",
       "auctionActive": "Auction In Progress",
       "auctionEnded": "Auction Has Ended",
+      "requestAuction": "Request Auction",
+      "auctionTab": "Auctions",
+      "auctionLive": "Live Auction",
       "form": {
         "title": "Title",
         "titlePlaceholder": "Enter vehicle/battery title",

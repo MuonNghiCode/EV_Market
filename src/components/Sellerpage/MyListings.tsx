@@ -30,8 +30,10 @@ import { useDataContext } from "../../contexts/DataContext";
 import { GridSkeleton } from "../common/Skeleton";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Swal from "sweetalert2";
+import RequestAuctionModal from "./RequestAuctionModal";
 
-type ListingType = "vehicle" | "battery";
+type ListingType = "vehicle" | "battery" | "auction";
+type EditType = "vehicle" | "battery";
 
 function MyListings() {
   const { t } = useI18nContext();
@@ -43,9 +45,16 @@ function MyListings() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Auction modal state
+  const [isAuctionModalOpen, setIsAuctionModalOpen] = useState(false);
+  const [auctionListingId, setAuctionListingId] = useState<string | null>(null);
+  const [auctionListingType, setAuctionListingType] = useState<"VEHICLE" | "BATTERY">("VEHICLE");
+  const [auctionListingPrice, setAuctionListingPrice] = useState(0);
+  const [auctionListingTitle, setAuctionListingTitle] = useState("");
+
   // Edit modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editType, setEditType] = useState<ListingType>("vehicle");
+  const [editType, setEditType] = useState<EditType>("vehicle");
   const [editId, setEditId] = useState<string | null>(null);
   const [editImages, setEditImages] = useState<string[]>([]);
   // Keep snapshot of images when opening modal to compute deletions
@@ -245,6 +254,7 @@ function MyListings() {
           type: "vehicle" as const,
           title: v.title,
           price: `${Number(v.price).toLocaleString()} VNĐ`,
+          rawPrice: Number(v.price),
           status: v.status === "SOLD" ? "sold" : "active",
           image: v.images?.[0] || "/Homepage/TopCar.png",
           specs: {
@@ -257,25 +267,115 @@ function MyListings() {
             model: v.model || "",
           },
         }));
-    return batteries
-      .filter((b) => b.status !== "DELISTED" && b.status === "AVAILABLE") // Chỉ hiển thị AVAILABLE
-      .map((b) => ({
-        id: b.id,
-        type: "battery" as const,
-        title: b.title,
-        price: `${Number(b.price).toLocaleString()} VNĐ`,
-        status: b.status === "SOLD" ? "sold" : "active",
-        image: b.images?.[0] || "/Homepage/Car.png",
-        specs: {
-          capacity: b.capacity ? `${b.capacity} kWh` : "",
-          health: `${b.health}% health`,
-          year: b.year ? `${b.year}` : "",
-          brand: b.brand || "",
-        },
-      }));
+    
+    if (tab === "battery")
+      return batteries
+        .filter((b) => b.status !== "DELISTED" && b.status === "AVAILABLE") // Chỉ hiển thị AVAILABLE
+        .map((b) => ({
+          id: b.id,
+          type: "battery" as const,
+          title: b.title,
+          price: `${Number(b.price).toLocaleString()} VNĐ`,
+          rawPrice: Number(b.price),
+          status: b.status === "SOLD" ? "sold" : "active",
+          image: b.images?.[0] || "/Homepage/Car.png",
+          specs: {
+            capacity: b.capacity ? `${b.capacity} kWh` : "",
+            health: `${b.health}% health`,
+            year: b.year ? `${b.year}` : "",
+            brand: b.brand || "",
+          },
+        }));
+    
+    // Tab đấu giá - hiển thị các sản phẩm đang trong trạng thái đấu giá
+    if (tab === "auction") {
+      const auctionVehicles = vehicles
+        .filter((v) => 
+          v.status === "AUCTION_PENDING_APPROVAL" || 
+          v.status === "AUCTION_APPROVED" || 
+          v.status === "AUCTION_REJECTED" || 
+          v.status === "AUCTION_ACTIVE" || 
+          v.status === "AUCTION_LIVE" || 
+          v.status === "AUCTION_ENDED"
+        )
+        .map((v) => ({
+          id: v.id,
+          type: "vehicle" as const,
+          title: v.title,
+          price: `${Number(v.price).toLocaleString()} VNĐ`,
+          rawPrice: Number(v.price),
+          status: v.status,
+          auctionStatus: v.status,
+          image: v.images?.[0] || "/Homepage/TopCar.png",
+          specs: {
+            mileage: `${v.mileage?.toLocaleString()} km`,
+            battery: v.specifications?.batteryAndCharging?.range
+              ? `${v.specifications.batteryAndCharging.range} km range`
+              : "",
+            year: v.year ? `${v.year}` : "",
+            brand: v.brand || "",
+            model: v.model || "",
+          },
+        }));
+      
+      const auctionBatteries = batteries
+        .filter((b) => 
+          b.status === "AUCTION_PENDING_APPROVAL" || 
+          b.status === "AUCTION_APPROVED" || 
+          b.status === "AUCTION_REJECTED" || 
+          b.status === "AUCTION_ACTIVE" || 
+          b.status === "AUCTION_LIVE" || 
+          b.status === "AUCTION_ENDED"
+        )
+        .map((b) => ({
+          id: b.id,
+          type: "battery" as const,
+          title: b.title,
+          price: `${Number(b.price).toLocaleString()} VNĐ`,
+          rawPrice: Number(b.price),
+          status: b.status,
+          auctionStatus: b.status,
+          image: b.images?.[0] || "/Homepage/Car.png",
+          specs: {
+            capacity: b.capacity ? `${b.capacity} kWh` : "",
+            health: `${b.health}% health`,
+            year: b.year ? `${b.year}` : "",
+            brand: b.brand || "",
+          },
+        }));
+      
+      return [...auctionVehicles, ...auctionBatteries];
+    }
+    
+    return [];
   }, [tab, vehicles, batteries]);
 
-  const openEdit = (item: { id: string; type: ListingType }) => {
+  const openRequestAuction = (item: { id: string; type: "vehicle" | "battery"; title: string; rawPrice: number }) => {
+    setAuctionListingId(item.id);
+    setAuctionListingType(item.type.toUpperCase() as "VEHICLE" | "BATTERY");
+    setAuctionListingPrice(item.rawPrice);
+    setAuctionListingTitle(item.title);
+    setIsAuctionModalOpen(true);
+  };
+
+  const handleAuctionSuccess = () => {
+    // Reload data sau khi request auction thành công
+    const load = async () => {
+      try {
+        const [vRes, bRes] = await Promise.all([
+          getMyVehicles(),
+          getMyBatteries(),
+        ]);
+        if (vRes.success) setVehicles(vRes.data?.vehicles || []);
+        if (bRes.success) setBatteries(bRes.data?.batteries || []);
+      } catch (e) {
+        console.error("Failed to reload listings:", e);
+      }
+    };
+    load();
+  };
+
+  const openEdit = (item: { id: string; type: EditType }) => {
     setEditType(item.type);
     setEditId(item.id);
 
@@ -321,7 +421,7 @@ function MyListings() {
     setIsModalOpen(true);
   };
 
-  const onDelete = async (item: { id: string; type: ListingType }) => {
+  const onDelete = async (item: { id: string; type: EditType }) => {
     const result = await Swal.fire({
       title: t("seller.listings.deleteConfirmTitle", "Xác nhận xóa"),
       text: t("seller.listings.deleteConfirm", "Bạn có chắc muốn xóa tin này?"),
@@ -582,6 +682,33 @@ function MyListings() {
               {t("seller.listings.battery")}
             </span>
           </button>
+          <button
+            onClick={() => setTab("auction")}
+            className={`relative px-5 py-2 font-semibold rounded-t-lg transition-colors duration-200
+            ${
+              tab === "auction"
+                ? "text-blue-700 border-b-2 border-blue-700 bg-blue-50"
+                : "text-slate-600 hover:text-blue-700"
+            }
+          `}
+          >
+            <span className="flex items-center gap-2">
+              <svg
+                className="w-5 h-5"
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                />
+              </svg>
+              {t("seller.listings.auctionTab")}
+            </span>
+          </button>
         </div>
         
    
@@ -605,20 +732,24 @@ function MyListings() {
           >
             {/* Top Action Bar */}
             <div className="absolute top-5 right-5 flex gap-2 z-10">
-              <button
-                onClick={() => openEdit({ id: item.id, type: tab })}
-                className="bg-white border border-blue-200 rounded-full p-3 shadow hover:bg-blue-600 hover:text-white transition-colors"
-                title={t("seller.listings.edit")}
-              >
-                <FiEdit2 className="w-6 h-6" />
-              </button>
-              <button
-                onClick={() => onDelete({ id: item.id, type: tab })}
-                className="bg-white border border-red-200 rounded-full p-3 shadow hover:bg-red-600 hover:text-white transition-colors"
-                title={t("seller.listings.delete")}
-              >
-                <FiTrash2 className="w-6 h-6" />
-              </button>
+              {tab !== "auction" && (
+                <>
+                  <button
+                    onClick={() => openEdit({ id: item.id, type: item.type as EditType })}
+                    className="bg-white border border-blue-200 rounded-full p-3 shadow hover:bg-blue-600 hover:text-white transition-colors"
+                    title={t("seller.listings.edit")}
+                  >
+                    <FiEdit2 className="w-6 h-6" />
+                  </button>
+                  <button
+                    onClick={() => onDelete({ id: item.id, type: item.type as EditType })}
+                    className="bg-white border border-red-200 rounded-full p-3 shadow hover:bg-red-600 hover:text-white transition-colors"
+                    title={t("seller.listings.delete")}
+                  >
+                    <FiTrash2 className="w-6 h-6" />
+                  </button>
+                </>
+              )}
             </div>
             {/* Image */}
             <div className="relative h-56 bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
@@ -629,18 +760,45 @@ function MyListings() {
                 className="object-contain rounded-2xl border border-blue-100 group-hover:scale-105 transition-transform duration-300"
               />
               {/* Status Badge */}
-              <span
-                className={`absolute bottom-5 left-5 flex items-center gap-1 px-4 py-1 text-sm font-semibold rounded-full shadow
-            ${
-              item.status === "active"
-                ? "bg-green-500 text-white"
-                : "bg-gray-400 text-white"
-            }`}
-              >
-                {item.status === "active"
-                  ? t("seller.listings.available")
-                  : t("seller.listings.soldStatus")}
-              </span>
+              {tab === "auction" && "auctionStatus" in item ? (
+                <span
+                  className={`absolute bottom-5 left-5 flex items-center gap-1 px-4 py-1 text-sm font-semibold rounded-full shadow
+                    ${
+                      item.auctionStatus === "AUCTION_PENDING_APPROVAL"
+                        ? "bg-yellow-500 text-white"
+                        : item.auctionStatus === "AUCTION_APPROVED"
+                        ? "bg-blue-500 text-white"
+                        : item.auctionStatus === "AUCTION_REJECTED"
+                        ? "bg-red-500 text-white"
+                        : item.auctionStatus === "AUCTION_ACTIVE" || item.auctionStatus === "AUCTION_LIVE"
+                        ? "bg-green-500 text-white animate-pulse"
+                        : "bg-gray-500 text-white"
+                    }`}
+                >
+                  {item.auctionStatus === "AUCTION_PENDING_APPROVAL"
+                    ? t("seller.listings.auctionPending")
+                    : item.auctionStatus === "AUCTION_APPROVED"
+                    ? t("seller.listings.auctionApproved")
+                    : item.auctionStatus === "AUCTION_REJECTED"
+                    ? t("seller.listings.auctionRejected")
+                    : item.auctionStatus === "AUCTION_ACTIVE" || item.auctionStatus === "AUCTION_LIVE"
+                    ? t("seller.listings.auctionLive")
+                    : t("seller.listings.auctionEnded")}
+                </span>
+              ) : (
+                <span
+                  className={`absolute bottom-5 left-5 flex items-center gap-1 px-4 py-1 text-sm font-semibold rounded-full shadow
+                ${
+                  item.status === "active"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-400 text-white"
+                }`}
+                >
+                  {item.status === "active"
+                    ? t("seller.listings.available")
+                    : t("seller.listings.soldStatus")}
+                </span>
+              )}
             </div>
             {/* Info */}
             <div className="flex-1 flex flex-col justify-between p-7">
@@ -718,6 +876,34 @@ function MyListings() {
                   </span>
                 )}
               </div>
+              
+              {/* Request Auction Button - Only show for AVAILABLE items in vehicle/battery tabs */}
+              {tab !== "auction" && item.status === "active" && "rawPrice" in item && (
+                <button
+                  onClick={() => openRequestAuction({
+                    id: item.id,
+                    type: item.type,
+                    title: item.title,
+                    rawPrice: item.rawPrice
+                  })}
+                  className="w-full mt-4 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+                    />
+                  </svg>
+                  {t("seller.listings.requestAuction")}
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -1158,6 +1344,19 @@ function MyListings() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Request Auction Modal */}
+      {auctionListingId && (
+        <RequestAuctionModal
+          isOpen={isAuctionModalOpen}
+          onClose={() => setIsAuctionModalOpen(false)}
+          listingType={auctionListingType}
+          listingId={auctionListingId}
+          listingPrice={auctionListingPrice}
+          listingTitle={auctionListingTitle}
+          onSuccess={handleAuctionSuccess}
+        />
       )}
     </div>
   );

@@ -194,13 +194,9 @@ export const getTimeRemaining = (endDate: string): {
   seconds: number
   isExpired: boolean
 } => {
-  // API trả về: "2025-11-10T21:55:00.000Z" 
-  // Nhưng thực chất đó là 21:55 giờ local (VN), không phải UTC
-  // Nên phải parse như local time
-  
-  // Remove 'Z' để parse như local time thay vì UTC
-  const endDateLocal = endDate.replace('Z', '')
-  const endTime = new Date(endDateLocal).getTime()
+  // API trả về UTC time với 'Z' suffix: "2025-11-21T11:00:00.000Z"
+  // Parse as UTC time (keep 'Z') to match backend validation
+  const endTime = new Date(endDate).getTime()
   const now = Date.now()
   
   const total = endTime - now

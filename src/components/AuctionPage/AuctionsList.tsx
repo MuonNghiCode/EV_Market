@@ -9,10 +9,9 @@ import {
   Sparkles,
   Plus,
 } from "lucide-react";
-import { getLiveAuctions, isAuthenticated } from "@/services";
+import { getLiveAuctions } from "@/services";
 import { LiveAuction } from "@/types/auction";
 import AuctionCard from "./AuctionCard";
-import CreateAuctionModal from "./CreateAuctionModal";
 import { useI18nContext } from "@/providers/I18nProvider";
 import { GridSkeleton } from "@/components/common/Skeleton";
 import colors from "@/Utils/Color";
@@ -31,7 +30,6 @@ export default function AuctionsList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     loadAuctions();
@@ -41,10 +39,8 @@ export default function AuctionsList() {
     try {
       setLoading(true);
       setError(null);
-      console.log("🔍 Fetching auctions - Page:", page);
       const response = await getLiveAuctions(page, 12);
-      console.log("✅ Auctions response:", response);
-      console.log("📊 Total results:", response.data.results.length);
+
       setAuctions(response.data.results);
       setTotalPages(response.data.totalPages);
       setTotalResults(response.data.totalResults);
@@ -67,18 +63,6 @@ export default function AuctionsList() {
 
     return matchesSearch && matchesType;
   });
-
-  const handleCreateAuction = () => {
-    if (!isAuthenticated()) {
-      router.push("/login");
-      return;
-    }
-    setIsCreateModalOpen(true);
-  };
-
-  const handleAuctionCreated = () => {
-    loadAuctions();
-  };
 
   if (loading && auctions.length === 0) {
     return (
@@ -210,17 +194,6 @@ export default function AuctionsList() {
                   {t("auctions.activeAuctions", "Active Auctions")}
                 </span>
               </div>
-            </div>
-
-            {/* Create Auction Button */}
-            <div className="mt-6">
-              <button
-                onClick={handleCreateAuction}
-                className="px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-5 h-5" />
-                {t("auctions.createNew", "Create New Auction")}
-              </button>
             </div>
           </div>
         </div>
@@ -414,13 +387,6 @@ export default function AuctionsList() {
           </div>
         )}
       </div>
-
-      {/* Create Auction Modal */}
-      <CreateAuctionModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSuccess={handleAuctionCreated}
-      />
     </div>
   );
 }
