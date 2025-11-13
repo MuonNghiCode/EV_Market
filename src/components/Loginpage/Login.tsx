@@ -246,7 +246,7 @@ function Login() {
                   </span>
                 </label>
                 <Link
-                  href="#"
+                  href="/forgot-password"
                   className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200"
                 >
                   {t("auth.login.forgotPassword", "Quên mật khẩu?")}

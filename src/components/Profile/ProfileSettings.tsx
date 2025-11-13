@@ -9,9 +9,11 @@ import {
   getUserProfile,
   updateUserProfile,
   uploadAvatar,
+  changePassword,
   logoutUser,
   type User as UserType,
 } from "../../services";
+import { useToast } from "../../providers/ToastProvider";
 import ProfileSidebar from "./ProfileSidebar";
 import ProfileTab from "./ProfileTab";
 import SecurityTab from "./SecurityTab";
@@ -27,6 +29,7 @@ function ProfileSettings({}: ProfileSettingsProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const { t } = useI18nContext();
+  const { success: showSuccess, error: showError } = useToast();
 
   // Form states
   const [formData, setFormData] = useState({
@@ -92,20 +95,21 @@ function ProfileSettings({}: ProfileSettingsProps) {
       });
 
       if (response.success) {
-        setSuccess(
-          t("profile.settings.updateSuccess", "Profile updated successfully!")
-        );
+        const successMsg = t("profile.settings.updateSuccess", "Profile updated successfully!");
+        setSuccess(successMsg);
+        showSuccess(successMsg);
         if (response.data?.user) {
           setUser(response.data.user);
         }
       } else {
-        setError(
-          response.message ||
-            t("profile.settings.updateFailed", "Failed to update profile")
-        );
+        const errorMsg = response.message || t("profile.settings.updateFailed", "Failed to update profile");
+        setError(errorMsg);
+        showError(errorMsg);
       }
     } catch (error) {
-      setError(t("profile.settings.updateFailed", "Failed to update profile"));
+      const errorMsg = t("profile.settings.updateFailed", "Failed to update profile");
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setSaving(false);
     }
@@ -119,20 +123,17 @@ function ProfileSettings({}: ProfileSettingsProps) {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      setError(
-        t(
-          "profile.settings.invalidImageFile",
-          "Please select a valid image file"
-        )
-      );
+      const errorMsg = t("profile.settings.invalidImageFile", "Please select a valid image file");
+      setError(errorMsg);
+      showError(errorMsg);
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError(
-        t("profile.settings.fileSizeError", "File size must be less than 5MB")
-      );
+      const errorMsg = t("profile.settings.fileSizeError", "File size must be less than 5MB");
+      setError(errorMsg);
+      showError(errorMsg);
       return;
     }
 
@@ -142,25 +143,21 @@ function ProfileSettings({}: ProfileSettingsProps) {
     try {
       const response = await uploadAvatar(file);
       if (response.success) {
-        setSuccess(
-          t(
-            "profile.settings.avatarUpdateSuccess",
-            "Avatar updated successfully!"
-          )
-        );
+        const successMsg = t("profile.settings.avatarUpdateSuccess", "Avatar updated successfully!");
+        setSuccess(successMsg);
+        showSuccess(successMsg);
         if (response.data?.user) {
           setUser(response.data.user);
         }
       } else {
-        setError(
-          response.message ||
-            t("profile.settings.avatarUploadFailed", "Failed to upload avatar")
-        );
+        const errorMsg = response.message || t("profile.settings.avatarUploadFailed", "Failed to upload avatar");
+        setError(errorMsg);
+        showError(errorMsg);
       }
     } catch (error) {
-      setError(
-        t("profile.settings.avatarUploadFailed", "Failed to upload avatar")
-      );
+      const errorMsg = t("profile.settings.avatarUploadFailed", "Failed to upload avatar");
+      setError(errorMsg);
+      showError(errorMsg);
     } finally {
       setUploadingAvatar(false);
     }
@@ -178,9 +175,65 @@ function ProfileSettings({}: ProfileSettingsProps) {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleUpdatePassword = () => {
-    // TODO: Implement password update logic
-    console.log("Update password:", formData);
+  const handleUpdatePassword = async () => {
+    setError(null);
+    setSuccess(null);
+
+    // Validation
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      const errorMsg = t("profile.settings.allPasswordFieldsRequired", "All password fields are required");
+      setError(errorMsg);
+      showError(errorMsg);
+      return;
+    }
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      const errorMsg = t("profile.settings.passwordsDoNotMatch", "New password and confirm password do not match");
+      setError(errorMsg);
+      showError(errorMsg);
+      return;
+    }
+
+    if (formData.newPassword.length < 6) {
+      const errorMsg = t("profile.settings.passwordTooShort", "Password must be at least 6 characters");
+      setError(errorMsg);
+      showError(errorMsg);
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await changePassword({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
+      });
+
+      if (response.success) {
+        const successMsg = t("profile.settings.passwordChangeSuccess", "Password changed successfully!");
+        setSuccess(successMsg);
+        showSuccess(successMsg);
+        
+        // Clear password fields
+        setFormData(prev => ({
+          ...prev,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        }));
+      } else {
+        const errorMsg = response.message || t("profile.settings.passwordChangeFailed", "Failed to change password");
+        setError(errorMsg);
+        showError(errorMsg);
+      }
+    } catch (error) {
+      const errorMsg = t("profile.settings.passwordChangeFailed", "Failed to change password");
+      setError(errorMsg);
+      showError(errorMsg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
