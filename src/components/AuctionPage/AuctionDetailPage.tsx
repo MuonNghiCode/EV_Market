@@ -1535,7 +1535,8 @@ export default function AuctionDetailPage({
                           <motion.button
                             key={multiplier}
                             onClick={() => {
-                              const newAmount = currentBid * multiplier;
+                              const currentInputAmount = Number(bidAmountInput.rawValue) || currentBid;
+                              const newAmount = currentInputAmount + (auction.bidIncrement * multiplier);
                               bidAmountInput.setValue(String(newAmount));
                             }}
                             className="py-2 px-3 bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-700 font-bold text-sm rounded-xl border border-indigo-200 transition-all shadow-sm"

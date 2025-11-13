@@ -40,6 +40,18 @@ export interface UpdateProfileResponse {
   error?: string
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export interface ChangePasswordResponse {
+  success: boolean
+  message: string
+  error?: string
+}
+
 export interface Review {
   id: string
   rating: number
@@ -172,8 +184,8 @@ export const getUserProfile = async (): Promise<UserProfileResponse> => {
   }
 }
 
-// Update user profile
-export const updateUserProfile = async (profileData: UpdateProfileRequest): Promise<UpdateProfileResponse> => {
+// Update user profile (with FormData for avatar upload)
+export const updateUserProfile = async (profileData: UpdateProfileRequest, avatarFile?: File): Promise<UpdateProfileResponse> => {
   try {
     const token = getAuthToken()
     
@@ -181,14 +193,29 @@ export const updateUserProfile = async (profileData: UpdateProfileRequest): Prom
       throw new Error('No authentication token found')
     }
 
+    // Use FormData if avatar file is provided
+    let body: FormData | string
+    let headers: HeadersInit = {
+      'Authorization': `Bearer ${token}`
+    }
+
+    if (avatarFile) {
+      const formData = new FormData()
+      if (profileData.name) formData.append('name', profileData.name)
+      if (profileData.email) formData.append('email', profileData.email)
+      formData.append('avatar', avatarFile)
+      body = formData
+      // Don't set Content-Type for FormData, browser will set it with boundary
+    } else {
+      headers['Content-Type'] = 'application/json'
+      body = JSON.stringify(profileData)
+    }
+
     const response = await fetch(`${API_BASE_URL}/users/me`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      credentials: 'include', // Include cookies
-      body: JSON.stringify(profileData)
+      method: 'PATCH',
+      headers,
+      credentials: 'include',
+      body
     })
 
     const data = await handleApiResponse(response)
@@ -207,8 +234,13 @@ export const updateUserProfile = async (profileData: UpdateProfileRequest): Prom
   }
 }
 
-// Upload avatar
+// Upload avatar (deprecated - use updateUserProfile with avatarFile instead)
 export const uploadAvatar = async (file: File): Promise<UpdateProfileResponse> => {
+  return updateUserProfile({}, file)
+}
+
+// Change password
+export const changePassword = async (passwordData: ChangePasswordRequest): Promise<ChangePasswordResponse> => {
   try {
     const token = getAuthToken()
     
@@ -216,29 +248,35 @@ export const uploadAvatar = async (file: File): Promise<UpdateProfileResponse> =
       throw new Error('No authentication token found')
     }
 
-    const formData = new FormData()
-    formData.append('avatar', file)
+    // Validate passwords match
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      throw new Error('New password and confirm password do not match')
+    }
 
-    const response = await fetch(`${API_BASE_URL}/users/avatar`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/users/me/password`, {
+      method: 'PATCH',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      credentials: 'include', // Include cookies
-      body: formData
+      credentials: 'include',
+      body: JSON.stringify({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+        confirmPassword: passwordData.confirmPassword
+      })
     })
 
     const data = await handleApiResponse(response)
     
     return {
       success: true,
-      message: data.message || 'Avatar updated successfully',
-      data: data.data || data
+      message: data.message || 'Password changed successfully'
     }
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to upload avatar',
+      message: error instanceof Error ? error.message : 'Failed to change password',
       error: error instanceof Error ? error.message : 'Unknown error'
     }
   }

@@ -85,6 +85,28 @@ export interface GoogleAuthResponse {
   error?: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean
+  message: string
+  error?: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+  confirmPassword: string
+}
+
+export interface ResetPasswordResponse {
+  success: boolean
+  message: string
+  error?: string
+}
+
 // Generic API error interface
 export interface ApiError {
   message: string
@@ -696,5 +718,70 @@ export const getCurrentUserId = async (): Promise<string | null> => {
   } catch (error) {
     console.error('Failed to get current user ID:', error)
     return null
+  }
+}
+
+/**
+ * Request password reset email
+ * @param email - User's email address
+ */
+export const forgotPassword = async (request: ForgotPasswordRequest): Promise<ForgotPasswordResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request)
+    })
+
+    const data = await handleApiResponse(response)
+    
+    return {
+      success: true,
+      message: data.message || 'If an account with that email exists, a password reset link has been sent.'
+    }
+  } catch (error) {
+    console.error('❌ Forgot Password - Error:', error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to request password reset',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
+}
+
+/**
+ * Reset password with token from email
+ * @param request - Token and new password
+ */
+export const resetPassword = async (request: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
+  try {
+    // Validate passwords match
+    if (request.newPassword !== request.confirmPassword) {
+      throw new Error('Passwords do not match')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request)
+    })
+
+    const data = await handleApiResponse(response)
+    
+    return {
+      success: true,
+      message: data.message || 'Your password has been reset successfully. You can now log in.'
+    }
+  } catch (error) {
+    console.error('❌ Reset Password - Error:', error)
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to reset password',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }
   }
 }

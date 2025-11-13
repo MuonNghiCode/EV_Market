@@ -18,6 +18,9 @@ export {
   refreshAccessToken,
   ensureValidToken,
   
+  forgotPassword,
+  resetPassword,
+  
   // User info helpers
   storeUserInfo,
   getUserInfo,
@@ -39,6 +42,7 @@ export {
   getUserProfile,
   updateUserProfile,
   uploadAvatar,
+  changePassword,
   getSellerProfile,
 } from './User'
 
