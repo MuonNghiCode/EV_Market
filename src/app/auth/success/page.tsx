@@ -24,7 +24,19 @@ export default function AuthSuccess() {
           
           // Store the access token using JWT's own expiration
           storeAuthToken(accessToken)
-          console.log('🔐 Google Auth - using JWT expiration')
+          
+          // Fetch and store user profile (including role)
+          try {
+            const { getUserProfile } = await import('../../../services/User')
+            const profileResponse = await getUserProfile()
+            
+            if (profileResponse.success && profileResponse.data?.user) {
+              const { storeUserInfo } = await import('../../../services/Auth')
+              storeUserInfo(profileResponse.data.user)
+            }
+          } catch (profileError) {
+            console.error('❌ Google Auth - Failed to fetch user profile:', profileError)
+          }
           
           setStatus('success')
           

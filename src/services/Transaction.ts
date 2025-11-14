@@ -203,22 +203,11 @@ export const getPendingAuctionTransaction = async (
       throw new Error('No authentication token found')
     }
 
-    console.log('🔍 Searching for pending auction transaction:', { itemId, itemType })
 
     // Get all transactions
     const response = await getMyTransactions(1, 100)
     
-    console.log('📋 All user transactions:', {
-      total: response.data.transactions.length,
-      transactions: response.data.transactions.map(tx => ({
-        id: tx.id,
-        status: tx.status,
-        type: (tx as any).type,
-        vehicleId: tx.vehicleId,
-        batteryId: tx.batteryId,
-        finalPrice: tx.finalPrice
-      }))
-    })
+
     
     // Find pending auction transaction for this item
     const pendingTransaction = response.data.transactions.find(tx => {
@@ -228,21 +217,13 @@ export const getPendingAuctionTransaction = async (
       
       const isPendingAuction = tx.status === 'PENDING' && (tx as any).type === 'AUCTION'
       
-      console.log('🔎 Checking transaction:', {
-        txId: tx.id,
-        matchesItem,
-        isPendingAuction,
-        status: tx.status,
-        type: (tx as any).type
-      })
+
       
       return matchesItem && isPendingAuction
     })
 
     if (pendingTransaction) {
-      console.log('✅ Found pending transaction:', pendingTransaction)
     } else {
-      console.log('⚠️ No pending transaction found for this item')
     }
 
     return pendingTransaction || null

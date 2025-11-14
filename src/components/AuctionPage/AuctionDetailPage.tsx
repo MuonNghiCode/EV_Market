@@ -349,7 +349,6 @@ export default function AuctionDetailPage({
             // Auto-bid logic: if enabled and not our own bid, automatically place next bid
             if (isAutoBidEnabled && hasDeposit && newBid.bidderId !== currentUserId && auction && auction.listingType) {
               const nextBidAmount = newBidAmount + auction.bidIncrement;
-              console.log("🤖 Auto-bidding enabled, placing bid:", nextBidAmount);
               
               // Place bid automatically after a short delay
               setTimeout(async () => {
@@ -1511,7 +1510,7 @@ export default function AuctionDetailPage({
                         className="w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500 cursor-pointer"
                       />
                       <label htmlFor="auto-bid" className="text-sm font-semibold text-purple-900 cursor-pointer flex-1">
-                        🤖 {t("auctions.autoBid", "Tự động đấu giá")}
+                         {t("auctions.autoBid", "Tự động đấu giá")}
                       </label>
                       {isAutoBidEnabled && (
                         <motion.span

@@ -51,11 +51,19 @@ export default function AuctionRequestCard({
       return;
     }
 
-    // GỬI THỜI GIAN ĐÚNG NHƯ NGƯỜI DÙNG CHỌN (KHÔNG CONVERT)
+    // Gửi thời gian kèm timezone offset (ví dụ: +07:00)
     // User chọn: "2025-11-10T21:55"
-    // Gửi API: "2025-11-10T21:55:00.000Z" (coi như UTC, nhưng thực ra là giờ local)
-    const startISO = startTime + ":00.000Z";
-    const endISO = endTime + ":00.000Z";
+    // Gửi API: "2025-11-10T21:55:00+07:00"
+    const getTimezoneOffset = () => {
+      const offset = -new Date().getTimezoneOffset();
+      const hours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, '0');
+      const minutes = (Math.abs(offset) % 60).toString().padStart(2, '0');
+      return `${offset >= 0 ? '+' : '-'}${hours}:${minutes}`;
+    };
+    
+    const timezoneOffset = getTimezoneOffset();
+    const startISO = startTime + ":00" + timezoneOffset;
+    const endISO = endTime + ":00" + timezoneOffset;
 
     onApprove(request.id, request.listingType, startISO, endISO);
     setShowApproveModal(false);
