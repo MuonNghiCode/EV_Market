@@ -117,7 +117,8 @@ export {
   formatAuctionPrice,
   getTimeRemaining,
   requestAuction,
-  createAuction
+  createAuction,
+  buyNowAuction
 } from './Auction'
 
 // Export Admin services

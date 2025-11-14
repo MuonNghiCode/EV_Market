@@ -2,8 +2,9 @@
 import React, { useState } from "react";
 import { useI18nContext } from "../../providers/I18nProvider";
 import { requestAuction } from "../../services";
-import { X, DollarSign, TrendingUp, Shield } from "lucide-react";
+import { X, DollarSign, TrendingUp, Shield, Zap } from "lucide-react";
 import { useToast } from "../../providers/ToastProvider";
+import { useCurrencyInput } from "../../hooks/useCurrencyInput";
 
 interface RequestAuctionModalProps {
   isOpen: boolean;
@@ -27,11 +28,13 @@ export default function RequestAuctionModal({
   const { t } = useI18nContext();
   const { success, error: showError } = useToast();
   const [loading, setLoading] = useState(false);
+  const buyNowPriceInput = useCurrencyInput("");
 
-  // Tính toán tự động theo công thức
-  const startingPrice = Math.floor(listingPrice * 0.5); // 50% giá bán
-  const bidIncrement = Math.floor(startingPrice * 0.04); // 4% giá khởi điểm
-  const depositAmount = Math.floor(listingPrice * 0.1); // 10% giá bán
+  // Tính toán tự động dựa trên buyNowPrice
+  const buyNowPrice = Number(buyNowPriceInput.rawValue) || listingPrice; // Default to listingPrice if not entered
+  const startingPrice = Math.floor(buyNowPrice * 0.5); // 50% buyNowPrice
+  const depositAmount = Math.floor(buyNowPrice * 0.04); // 4% buyNowPrice
+  const bidIncrement = Math.floor(startingPrice * 0.02); // 2% startingPrice
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +46,7 @@ export default function RequestAuctionModal({
         startingPrice,
         bidIncrement,
         depositAmount,
+        buyNowPrice: buyNowPriceInput.rawValue ? Number(buyNowPriceInput.rawValue) : undefined,
         auctionStartsAt: new Date().toISOString(), // Placeholder
         auctionEndsAt: new Date().toISOString(), // Placeholder
       });
@@ -102,9 +106,29 @@ export default function RequestAuctionModal({
             </p>
           </div>
 
-          {/* Calculated Values */}
+          {/* Buy Now Price - User Input */}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-5 border-2 border-orange-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-5 h-5 text-orange-600" />
+              <label className="text-sm font-semibold text-gray-700">
+                Giá mua đứt <span className="text-red-500">*</span>
+              </label>
+            </div>
+            <input
+              type="text"
+              value={buyNowPriceInput.displayValue}
+              onChange={(e) => buyNowPriceInput.handleChange(e.target.value)}
+              placeholder="1,000,000,000"
+              className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 font-semibold text-lg"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Các giá trị khác sẽ tự động tính dựa trên giá này
+            </p>
+          </div>
+
+          {/* Calculated Values - Now Disabled */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Starting Price */}
+            {/* Starting Price - Auto */}
             <div className="bg-green-50 rounded-xl p-5 border-2 border-green-200">
               <div className="flex items-center gap-2 mb-2">
                 <DollarSign className="w-5 h-5 text-green-600" />
@@ -113,30 +137,14 @@ export default function RequestAuctionModal({
                 </label>
               </div>
               <p className="text-2xl font-bold text-green-700">
-                {startingPrice.toLocaleString()} 
+                {startingPrice.toLocaleString()} VNĐ
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                50% giá bán
+                ✓ 50% giá mua ngay
               </p>
             </div>
 
-            {/* Bid Increment */}
-            <div className="bg-blue-50 rounded-xl p-5 border-2 border-blue-200">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">
-                  {t("seller.auction.bidIncrement")}
-                </label>
-              </div>
-              <p className="text-2xl font-bold text-blue-700">
-                {bidIncrement.toLocaleString()}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                VNĐ - 4% giá khởi điểm
-              </p>
-            </div>
-
-            {/* Deposit Amount */}
+            {/* Deposit Amount - Auto */}
             <div className="bg-purple-50 rounded-xl p-5 border-2 border-purple-200">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-5 h-5 text-purple-600" />
@@ -145,10 +153,26 @@ export default function RequestAuctionModal({
                 </label>
               </div>
               <p className="text-2xl font-bold text-purple-700">
-                {depositAmount.toLocaleString()}
+                {depositAmount.toLocaleString()} VNĐ
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                VNĐ - 10% giá bán
+                ✓ 4% giá mua ngay
+              </p>
+            </div>
+
+            {/* Bid Increment - Auto */}
+            <div className="bg-blue-50 rounded-xl p-5 border-2 border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <label className="text-sm font-semibold text-gray-700">
+                  {t("seller.auction.bidIncrement")}
+                </label>
+              </div>
+              <p className="text-2xl font-bold text-blue-700">
+                {bidIncrement.toLocaleString()} VNĐ
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                ✓ 2% giá khởi điểm
               </p>
             </div>
           </div>

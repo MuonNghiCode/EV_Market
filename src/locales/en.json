@@ -922,6 +922,8 @@
     "createError": "Failed to create auction",
     "settings": "Auction Settings",
     "depositAmount": "Deposit Amount",
+    "buyNowPrice": "Buy Now Price",
+    "buyNowPriceHint": "Buyers can purchase at this price instead of bidding",
     "step": "Step",
     "of": "of",
     "congratulations": "Congratulations! You won the auction!",

@@ -168,7 +168,6 @@ export default function Checkout() {
             return;
           }
         } catch (err) {
-          console.log("Could not check purchase history:", err);
           // Continue anyway - don't block checkout if purchase history check fails
         }
 
@@ -324,6 +323,7 @@ export default function Checkout() {
         listingId,
         listingType: listingType as "VEHICLE" | "BATTERY",
         paymentMethod: selectedPaymentMethod === "qr" ? "MOMO" : "WALLET",
+        redirectUrl: `${window.location.origin}/checkout/result`,
       });
 
       if (selectedPaymentMethod === "qr") {

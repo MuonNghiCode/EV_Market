@@ -51,6 +51,7 @@ export interface LiveAuction {
   startingPrice: number
   bidIncrement: number
   depositAmount: number
+  buyNowPrice?: number
   isVerified: boolean
   auctionRejectionReason: string | null
   createdAt: string
