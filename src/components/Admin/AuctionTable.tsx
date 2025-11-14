@@ -82,9 +82,21 @@ export default function AuctionTable({
   const handleConfirmApprove = async () => {
     if (!selectedRequest || !startTime || !endTime) return;
 
+    // Convert datetime-local to ISO with timezone offset
+    const getTimezoneOffset = () => {
+      const offset = -new Date().getTimezoneOffset();
+      const hours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, '0');
+      const minutes = (Math.abs(offset) % 60).toString().padStart(2, '0');
+      return `${offset >= 0 ? '+' : '-'}${hours}:${minutes}`;
+    };
+    
+    const timezoneOffset = getTimezoneOffset();
+    const startISO = startTime + ":00" + timezoneOffset;
+    const endISO = endTime + ":00" + timezoneOffset;
+
     setIsLoading(true);
     try {
-      await onApprove(selectedRequest.id, selectedRequest.listingType, startTime, endTime);
+      await onApprove(selectedRequest.id, selectedRequest.listingType, startISO, endISO);
       setShowApproveDialog(false);
       setSelectedRequest(null);
     } finally {
