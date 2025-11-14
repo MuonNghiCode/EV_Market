@@ -2,8 +2,9 @@
 import React, { useState } from "react";
 import { useI18nContext } from "../../providers/I18nProvider";
 import { requestAuction } from "../../services";
-import { X, DollarSign, TrendingUp, Shield } from "lucide-react";
+import { X, DollarSign, TrendingUp, Shield, Zap } from "lucide-react";
 import { useToast } from "../../providers/ToastProvider";
+import { useCurrencyInput } from "../../hooks/useCurrencyInput";
 
 interface RequestAuctionModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export default function RequestAuctionModal({
   const { t } = useI18nContext();
   const { success, error: showError } = useToast();
   const [loading, setLoading] = useState(false);
+  const buyNowPriceInput = useCurrencyInput("");
 
   // Tính toán tự động theo công thức
   const startingPrice = Math.floor(listingPrice * 0.5); // 50% giá bán
@@ -43,6 +45,7 @@ export default function RequestAuctionModal({
         startingPrice,
         bidIncrement,
         depositAmount,
+        buyNowPrice: buyNowPriceInput.rawValue ? Number(buyNowPriceInput.rawValue) : undefined,
         auctionStartsAt: new Date().toISOString(), // Placeholder
         auctionEndsAt: new Date().toISOString(), // Placeholder
       });
@@ -99,6 +102,26 @@ export default function RequestAuctionModal({
               <span className="font-bold text-blue-700">
                 {listingPrice.toLocaleString()} VNĐ
               </span>
+            </p>
+          </div>
+
+          {/* Buy Now Price - Optional */}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-5 border-2 border-orange-200">
+            <div className="flex items-center gap-2 mb-3">
+              <Zap className="w-5 h-5 text-orange-600" />
+              <label className="text-sm font-semibold text-gray-700">
+                Giá mua đứt (Tùy chọn)
+              </label>
+            </div>
+            <input
+              type="text"
+              value={buyNowPriceInput.displayValue}
+              onChange={(e) => buyNowPriceInput.handleChange(e.target.value)}
+              placeholder="7,000,000"
+              className="w-full px-4 py-3 border-2 border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 font-semibold text-lg"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Người mua có thể mua đứt với giá này thay vì đấu giá
             </p>
           </div>
 

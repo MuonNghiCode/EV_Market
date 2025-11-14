@@ -26,6 +26,7 @@ import {
   placeBid,
   payDeposit,
   getAuctionDetail,
+  buyNowAuction,
 } from "@/services";
 import {
   payAuctionTransaction,
@@ -248,16 +249,7 @@ export default function AuctionDetailPage({
           );
           setHasDeposit(hasDeposit);
 
-          console.log("✅ Auction data loaded:", {
-            id: auctionId,
-            type: listingType,
-            title: auctionData.title,
-            currentBid: highestBid,
-            userAuctionResult: auctionData.userAuctionResult,
-            hasUserDeposit: auctionData.hasUserDeposit,
-            auctionEndsAt: auctionData.auctionEndsAt,
-            totalBids: auctionData.bids?.length || 0,
-          });
+     
         }
       } catch (error) {
         showError(
@@ -299,25 +291,17 @@ export default function AuctionDetailPage({
 
   // Realtime bidding subscription
   useEffect(() => {
-    console.log(
-      "🔄 Realtime effect triggered. Auction:",
-      auction ? "loaded" : "not loaded",
-      "ID:",
-      auctionId
-    );
+   
 
     if (!auction) {
-      console.log("⏸️ Auction not loaded yet, skipping subscription");
       return;
     }
 
-    console.log("🔌 Setting up realtime subscription for auction:", auctionId);
-    console.log("📊 Auction type:", auction.listingType);
+ 
 
     // Save listing type for client-side filtering
     const listingType = auction.listingType;
 
-    console.log("🔍 Subscribing to all Bid events - client-side filtering");
 
     // Create a channel with server-side filtering
     const channel = supabase
@@ -330,7 +314,6 @@ export default function AuctionDetailPage({
           table: "Bid",
         },
         (payload) => {
-          console.log("� Received payload:", payload);
 
           const newBid = payload.new as any;
 
@@ -338,7 +321,6 @@ export default function AuctionDetailPage({
           if (newBid && typeof newBid.amount === "number") {
             const newBidAmount = newBid.amount;
 
-            console.log("💰 New bid amount:", newBidAmount);
 
             setCurrentBid(newBidAmount);
 
@@ -354,7 +336,6 @@ export default function AuctionDetailPage({
               setTimeout(async () => {
                 try {
                   await placeBid(auction.listingType!, auction.id, { amount: nextBidAmount });
-                  console.log("✅ Auto-bid placed successfully");
                 } catch (error) {
                   console.error("❌ Auto-bid failed:", error);
                   // Silently fail - user can still manually bid
@@ -391,25 +372,17 @@ export default function AuctionDetailPage({
         }
       )
       .subscribe((status) => {
-        console.log("📡 Subscription status:", status);
         if (status === "SUBSCRIBED") {
-          console.log(
-            "✅ Successfully subscribed to Bid table (client-side filtering)"
-          );
+        
         } else if (status === "CHANNEL_ERROR") {
-          console.error(
-            "❌ Channel error - check Supabase Replication settings"
-          );
+       
         } else if (status === "TIMED_OUT") {
-          console.error("⏱️ Subscription timed out");
         } else if (status === "CLOSED") {
-          console.log("🔒 Channel closed");
         }
       });
 
     // Cleanup: unsubscribe when component unmounts or auction changes
     return () => {
-      console.log("🧹 Cleaning up realtime subscription");
       supabase.removeChannel(channel);
     };
   }, [auctionId, auction?.listingType, isAutoBidEnabled, hasDeposit, currentUserId]); // Depend on auctionId, listingType, and auto-bid state
@@ -532,20 +505,12 @@ export default function AuctionDetailPage({
     try {
       setIsPayingAuction(true);
 
-      console.log("💰 Initiating auction payment:", {
-        transactionId,
-        auctionId: auction?.id,
-        auctionTitle: auction?.title,
-        finalPrice: currentBid || auction?.startingPrice,
-        userAuctionResult: auction?.userAuctionResult,
-        paymentMethod,
-      });
+   
 
       const response = await payAuctionTransaction(transactionId, {
         paymentMethod,
       });
 
-      console.log("✅ Payment response:", response);
 
       if (response.data.paymentGateway === "WALLET") {
         showSuccess(t("auctions.paymentSuccess", "Thanh toán thành công!"));
@@ -554,13 +519,9 @@ export default function AuctionDetailPage({
         if (listingType) {
           const { data } = await getAuctionDetail(listingType, auctionId);
           setAuction(data);
-          console.log("🔄 Auction refreshed after payment:", data);
         }
       } else if (response.data.paymentDetail?.payUrl) {
-        console.log(
-          "🔗 Redirecting to payment gateway:",
-          response.data.paymentDetail.payUrl
-        );
+      
         // Redirect to payment gateway (for MOMO)
         window.location.href = response.data.paymentDetail.payUrl;
       }
@@ -591,6 +552,52 @@ export default function AuctionDetailPage({
       }
     } finally {
       setIsPayingAuction(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    if (!auction || !auction.listingType) return;
+
+    try {
+      const response = await buyNowAuction(auction.listingType, auction.id);
+
+      if (response.data?.transaction) {
+        showSuccess(
+          response.message || t(
+            "auctions.buyNowSuccess",
+            "Mua đứt thành công! Giao dịch đã được hoàn tất."
+          )
+        );
+        
+        // Refresh auction details to show updated status
+        const { data } = await getAuctionDetail(auction.listingType, auctionId);
+        setAuction(data);
+      }
+    } catch (error) {
+      console.error("❌ Buy Now Error:", error);
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : t("auctions.errors.buyNowFailed", "Mua đứt thất bại");
+
+      // Check for insufficient balance
+      if (
+        errorMessage.toLowerCase().includes("insufficient") ||
+        errorMessage.toLowerCase().includes("not enough") ||
+        errorMessage.toLowerCase().includes("balance")
+      ) {
+        showError(
+          t(
+            "auctions.errors.insufficientBalance",
+            "Số dư không đủ để mua đứt"
+          ),
+          6000,
+          t("auctions.errors.goToWallet", "Nạp tiền"),
+          () => router.push("/wallet")
+        );
+      } else {
+        showError(errorMessage);
+      }
     }
   };
 
@@ -1592,13 +1599,9 @@ export default function AuctionDetailPage({
                     </motion.button>
 
                     {/* Buy Now button */}
-                    {!timeLeft.isExpired && auction.price && (
+                    {!timeLeft.isExpired && auction.buyNowPrice && (
                       <motion.button
-                        onClick={() => {
-                          router.push(
-                            `/checkout?listingId=${auction.id}&listingType=${auction.listingType}`
-                          );
-                        }}
+                        onClick={handleBuyNow}
                         className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -1606,7 +1609,7 @@ export default function AuctionDetailPage({
                         animate={{ opacity: 1, y: 0 }}
                       >
                         <ShoppingCart className="w-5 h-5" />
-                        {t("auctions.buyNow", "Mua đứt")} - {formatAuctionPrice(auction.price)}
+                        {t("auctions.buyNow", "Mua đứt")} - {formatAuctionPrice(auction.buyNowPrice)}
                       </motion.button>
                     )}
                   </>

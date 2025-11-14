@@ -49,7 +49,6 @@ export const getLiveAuctions = async (page = 1, limit = 10): Promise<LiveAuction
 
     // Thêm query parameters để lấy đấu giá đang diễn ra hoặc sắp diễn ra
     const url = `${API_BASE_URL}/auctions/live`
-    // console.log("🔗 Fetching auctions from:", url);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -57,9 +56,7 @@ export const getLiveAuctions = async (page = 1, limit = 10): Promise<LiveAuction
       credentials: 'include',
     })
 
-    console.log("📡 Auction API response status:", response.status);
     const data = await handleApiResponse(response)
-    console.log("📦 Auction API data:", data);
     return data
   } catch (error) {
     console.error("❌ Auction API error:", error);
@@ -227,6 +224,7 @@ export interface RequestAuctionData {
   startingPrice: number
   bidIncrement: number
   depositAmount?: number
+  buyNowPrice?: number
   auctionStartsAt: string
   auctionEndsAt: string
 }
@@ -325,6 +323,65 @@ export const createAuction = async (
     return data
   } catch (error) {
     // Re-throw the error to preserve the original message from handleApiResponse
+    throw error
+  }
+}
+
+/**
+ * Buy now - Purchase auction item immediately at buy now price
+ * @param listingType - 'VEHICLE' or 'BATTERY'
+ * @param auctionId - Auction ID
+ * @returns Transaction with status PAID
+ */
+export interface BuyNowResponse {
+  message: string
+  data: {
+    transaction: {
+      id: string
+      buyerId: string
+      status: 'PAID'
+      type: 'AUCTION'
+      vehicleId: string | null
+      batteryId: string | null
+      finalPrice: number
+      paymentGateway: 'WALLET' | 'MOMO'
+      paymentDetail: any
+      createdAt: string
+      updatedAt: string
+      vehicle?: any
+      battery?: any
+      buyer: any
+    }
+  }
+}
+
+export const buyNowAuction = async (
+  listingType: 'VEHICLE' | 'BATTERY',
+  auctionId: string
+): Promise<BuyNowResponse> => {
+  try {
+    const { ensureValidToken } = await import('./Auth')
+    const token = await ensureValidToken()
+
+    if (!token) {
+      throw new Error('Authentication required to buy now')
+    }
+
+    const response = await fetch(
+      `${API_BASE_URL}/auctions/${listingType}/${auctionId}/buy-now`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include'
+      }
+    )
+
+    const data = await handleApiResponse(response)
+    return data
+  } catch (error) {
     throw error
   }
 }

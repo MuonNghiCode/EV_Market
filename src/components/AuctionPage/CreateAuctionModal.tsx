@@ -48,6 +48,7 @@ export default function CreateAuctionModal({
   const startingPriceInput = useCurrencyInput("");
   const bidIncrementInput = useCurrencyInput("");
   const depositAmountInput = useCurrencyInput("");
+  const buyNowPriceInput = useCurrencyInput("");
   
   // Auto-calculate bid increment as 10% of starting price
   React.useEffect(() => {
@@ -158,6 +159,7 @@ export default function CreateAuctionModal({
       formData.append("startingPrice", startingPriceInput.rawValue);
       formData.append("bidIncrement", bidIncrementInput.rawValue);
       if (depositAmountInput.rawValue) formData.append("depositAmount", depositAmountInput.rawValue);
+      if (buyNowPriceInput.rawValue) formData.append("buyNowPrice", buyNowPriceInput.rawValue);
 
       images.forEach((image) => {
         formData.append("images", image);
@@ -212,6 +214,7 @@ export default function CreateAuctionModal({
     startingPriceInput.reset();
     bidIncrementInput.reset();
     depositAmountInput.reset();
+    buyNowPriceInput.reset();
     setCurrentStep(1);
     onClose();
   };
@@ -543,6 +546,22 @@ export default function CreateAuctionModal({
                       className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
                       placeholder="300,000"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: colors.Text }}>
+                      {t("auctions.buyNowPrice", "Giá mua đứt")} ({t("common.optional", "Optional")})
+                    </label>
+                    <input
+                      type="text"
+                      value={buyNowPriceInput.displayValue}
+                      onChange={(e) => buyNowPriceInput.handleChange(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                      placeholder="4,000,000"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t("auctions.buyNowPriceHint", "Người mua có thể mua đứt với giá này thay vì đấu giá")}
+                    </p>
                   </div>
                 </div>
 

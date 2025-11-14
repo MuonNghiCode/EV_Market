@@ -12,6 +12,7 @@ import {
 import { getLiveAuctions } from "@/services";
 import { LiveAuction } from "@/types/auction";
 import AuctionCard from "./AuctionCard";
+import CreateAuctionModal from "./CreateAuctionModal";
 import { useI18nContext } from "@/providers/I18nProvider";
 import { GridSkeleton } from "@/components/common/Skeleton";
 import colors from "@/Utils/Color";
@@ -30,6 +31,7 @@ export default function AuctionsList() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadAuctions();
@@ -180,9 +182,24 @@ export default function AuctionsList() {
               )}
             </p>
 
-            <div className="flex items-center justify-center gap-4 text-sm">
+            {/* Create Auction Button - Centered */}
+            <div className="flex flex-col items-center justify-center gap-4">
+              <motion.button
+                onClick={() => setShowCreateModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Plus className="w-5 h-5" />
+                {t("auctions.createAuction", "Tạo đấu giá")}
+              </motion.button>
+              
+              {/* Active Auctions Count - Below button */}
               <div
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 text-sm"
                 style={{ color: colors.SubText }}
               >
                 <div
@@ -387,6 +404,16 @@ export default function AuctionsList() {
           </div>
         )}
       </div>
+
+      {/* Create Auction Modal */}
+      <CreateAuctionModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={() => {
+          setShowCreateModal(false);
+          loadAuctions(); // Reload auctions after creating
+        }}
+      />
     </div>
   );
 }
