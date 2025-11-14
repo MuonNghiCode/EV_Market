@@ -50,14 +50,24 @@ export default function CreateAuctionModal({
   const depositAmountInput = useCurrencyInput("");
   const buyNowPriceInput = useCurrencyInput("");
   
-  // Auto-calculate bid increment as 10% of starting price
+  // Auto-calculate all prices based on buyNowPrice
   React.useEffect(() => {
-    const startingPrice = Number(startingPriceInput.rawValue);
-    if (startingPrice > 0) {
-      const autoIncrement = Math.round(startingPrice * 0.1);
+    const buyNowPrice = Number(buyNowPriceInput.rawValue);
+    if (buyNowPrice > 0) {
+      const autoStartingPrice = Math.round(buyNowPrice * 0.5); // 50% buyNowPrice
+      const autoDeposit = Math.round(buyNowPrice * 0.04); // 4% buyNowPrice
+      const autoIncrement = Math.round(autoStartingPrice * 0.02); // 2% startingPrice
+      
+      startingPriceInput.setValue(String(autoStartingPrice));
+      depositAmountInput.setValue(String(autoDeposit));
       bidIncrementInput.setValue(String(autoIncrement));
+    } else {
+      // Reset if no buyNowPrice
+      startingPriceInput.setValue("");
+      depositAmountInput.setValue("");
+      bidIncrementInput.setValue("");
     }
-  }, [startingPriceInput.rawValue]);
+  }, [buyNowPriceInput.rawValue]);
 
   // Vehicle specific
   const [model, setModel] = useState("");
@@ -142,8 +152,8 @@ export default function CreateAuctionModal({
       return;
     }
 
-    // Validate step 3 - auction settings
-    if (!startingPriceInput.rawValue || !bidIncrementInput.rawValue) {
+    // Validate step 3 - auction settings (only buyNowPrice required, others auto-calculated)
+    if (!buyNowPriceInput.rawValue) {
       showError(t("seller.addListing.fillRequired", "Please fill all required fields"));
       return;
     }
@@ -190,8 +200,12 @@ export default function CreateAuctionModal({
       await createAuction(auctionType, formData);
       
       showSuccess(t("auctions.createSuccess", "Auction created successfully and is pending approval!"));
-      onSuccess();
-      handleClose();
+      
+      // Delay to show toast before closing modal
+      setTimeout(() => {
+        handleClose();
+        onSuccess();
+      }, 2000);
     } catch (error) {
       showError(error instanceof Error ? error.message : t("auctions.createError", "Failed to create auction"));
     } finally {
@@ -232,8 +246,7 @@ export default function CreateAuctionModal({
   const canProceedToStep3 = images.length > 0;
   
   const canSubmit = 
-    startingPriceInput.rawValue && bidIncrementInput.rawValue &&
-    !hasFieldError(errors, 'startingPrice') && !hasFieldError(errors, 'bidIncrement');
+    buyNowPriceInput.rawValue && startingPriceInput.rawValue && bidIncrementInput.rawValue;
 
   if (!isOpen) return null;
 
@@ -500,68 +513,65 @@ export default function CreateAuctionModal({
             {currentStep === 3 && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4">
+                  {/* Buy Now Price - User Input */}
                   <div>
                     <label className="block text-xs font-medium mb-1.5" style={{ color: colors.Text }}>
-                      {t("auctions.startingPrice")} <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={startingPriceInput.displayValue}
-                      onChange={(e) => startingPriceInput.handleChange(e.target.value)}
-                      onBlur={() => handleInputBlur('startingPrice', startingPriceInput.rawValue)}
-                      className={`w-full px-3 py-2 text-sm rounded-lg border transition-all ${
-                        hasFieldError(errors, 'startingPrice') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                      } focus:ring-1`}
-                      placeholder="5,000,000"
-                    />
-                    {getFieldError(errors, 'startingPrice') && <p className="text-xs text-red-600 mt-1">{t(getFieldError(errors, 'startingPrice')!)}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: colors.Text }}>
-                      {t("auctions.bidIncrement")} <span className="text-red-500">*</span>
-                      <span className="text-xs text-gray-500 ml-2">(Tự động = 10% giá khởi điểm)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={bidIncrementInput.displayValue}
-                      onChange={(e) => bidIncrementInput.handleChange(e.target.value)}
-                      onBlur={() => handleInputBlur('bidIncrement', bidIncrementInput.rawValue)}
-                      className={`w-full px-3 py-2 text-sm rounded-lg border transition-all ${
-                        hasFieldError(errors, 'bidIncrement') ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                      } focus:ring-1`}
-                      placeholder="Tự động tính toán"
-                    />
-                    {getFieldError(errors, 'bidIncrement') && <p className="text-xs text-red-600 mt-1">{t(getFieldError(errors, 'bidIncrement')!)}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: colors.Text }}>
-                      {t("auctions.depositAmount")} ({t("common.optional", "Optional")})
-                    </label>
-                    <input
-                      type="text"
-                      value={depositAmountInput.displayValue}
-                      onChange={(e) => depositAmountInput.handleChange(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                      placeholder="300,000"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1.5" style={{ color: colors.Text }}>
-                      {t("auctions.buyNowPrice", "Giá mua đứt")} ({t("common.optional", "Optional")})
+                      {t("auctions.buyNowPrice", "Giá mua đứt")} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={buyNowPriceInput.displayValue}
                       onChange={(e) => buyNowPriceInput.handleChange(e.target.value)}
                       className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
-                      placeholder="4,000,000"
+                      placeholder="1,000,000,000"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {t("auctions.buyNowPriceHint", "Người mua có thể mua đứt với giá này thay vì đấu giá")}
                     </p>
+                  </div>
+
+                  {/* Auto-calculated fields - Disabled */}
+                  <div className="bg-blue-50 rounded-lg p-4 space-y-3 border border-blue-200">
+                    <p className="text-xs font-semibold text-blue-900 mb-2">📊 Các giá trị tự động tính toán:</p>
+                    
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5 text-gray-700">
+                        {t("auctions.startingPrice")} (50% giá mua ngay)
+                      </label>
+                      <input
+                        type="text"
+                        value={startingPriceInput.displayValue}
+                        disabled
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-blue-200 bg-blue-50/50 text-gray-700 cursor-not-allowed"
+                        placeholder="Tự động tính"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5 text-gray-700">
+                        {t("auctions.depositAmount")} (4% giá mua ngay)
+                      </label>
+                      <input
+                        type="text"
+                        value={depositAmountInput.displayValue}
+                        disabled
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-blue-200 bg-blue-50/50 text-gray-700 cursor-not-allowed"
+                        placeholder="Tự động tính"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium mb-1.5 text-gray-700">
+                        {t("auctions.bidIncrement")} (2% giá khởi điểm)
+                      </label>
+                      <input
+                        type="text"
+                        value={bidIncrementInput.displayValue}
+                        disabled
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-blue-200 bg-blue-50/50 text-gray-700 cursor-not-allowed"
+                        placeholder="Tự động tính"
+                      />
+                    </div>
                   </div>
                 </div>
 

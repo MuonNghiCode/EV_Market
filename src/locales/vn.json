@@ -911,6 +911,8 @@
     "createError": "Không thể tạo đấu giá",
     "settings": "Cài đặt đấu giá",
     "depositAmount": "Tiền đặt cọc",
+    "buyNowPrice": "Giá mua đứt",
+    "buyNowPriceHint": "Người mua có thể mua đứt với giá này thay vì đấu giá",
     "step": "Bước",
     "of": "của",
     "congratulations": "Chúc mừng! Bạn đã thắng đấu giá!",

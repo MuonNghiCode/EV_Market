@@ -3,6 +3,9 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import AuctionCountdownTimer from "./AuctionCountdownTimer";
+import AuctionImageGallery from "./AuctionImageGallery";
+import AuctionBiddingPanel from "./AuctionBiddingPanel";
 import {
   Clock,
   Zap,
@@ -42,14 +45,16 @@ interface AuctionDetailPageProps {
   auctionId: string;
 }
 
-// Helper function to format date without timezone conversion
+// Helper function to format date in local timezone
 const formatDateTime = (dateString: string) => {
   const date = new Date(dateString);
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  // Browser automatically converts UTC to local timezone
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
 
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 };
@@ -654,51 +659,11 @@ export default function AuctionDetailPage({
           {/* Left Column - Images & Details */}
           <div className="lg:col-span-2 space-y-6">
             {/* Main Image Gallery */}
-            <motion.div
-              className="bg-white/90 backdrop-blur-xl rounded-3xl overflow-hidden border border-white/40 shadow-xl"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 via-white to-blue-50">
-                {auction.images && auction.images.length > 0 ? (
-                  <Image
-                    src={auction.images[0]}
-                    alt={auction.title}
-                    fill
-                    className="object-contain p-8 drop-shadow-2xl"
-                    sizes="(max-width: 1024px) 100vw, 66vw"
-                    priority
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Icon className="w-24 h-24 text-slate-300" />
-                  </div>
-                )}
-              </div>
-
-              {/* Thumbnail Gallery */}
-              {auction.images && auction.images.length > 1 && (
-                <div className="p-4 grid grid-cols-4 gap-3 bg-gradient-to-r from-slate-50 to-blue-50">
-                  {auction.images.slice(0, 4).map((img, idx) => (
-                    <motion.div
-                      key={idx}
-                      className="relative aspect-video rounded-xl overflow-hidden border-2 border-slate-200 hover:border-blue-400 cursor-pointer transition-all shadow-sm hover:shadow-md"
-                      whileHover={{ scale: 1.05, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Image
-                        src={img}
-                        alt={`View ${idx + 1}`}
-                        fill
-                        className="object-cover"
-                        sizes="150px"
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
+            <AuctionImageGallery
+              images={auction.images}
+              title={auction.title}
+              isVehicle={isVehicle}
+            />
 
             {/* Title and Info Card */}
             <motion.div
@@ -1046,595 +1011,49 @@ export default function AuctionDetailPage({
               transition={{ duration: 0.5, delay: 0.1 }}
             >
               {/* Countdown Timer */}
-              <motion.div
-                className="bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 rounded-3xl p-5 text-white shadow-xl"
-                whileHover={{
-                  scale: 1.02,
-                  boxShadow: "0 16px 32px rgba(245, 158, 11, 0.25)",
+              <AuctionCountdownTimer
+                timeLeft={timeLeft}
+                auctionStartsAt={auction.auctionStartsAt}
+                auctionEndsAt={auction.auctionEndsAt}
+                isAuctionStarted={isAuctionStarted()}
+              />
+
+              {/* Bidding Panel */}
+              <AuctionBiddingPanel
+                auction={auction}
+                timeLeft={timeLeft}
+                hasDeposit={hasDeposit}
+                currentBid={currentBid}
+                isPlacingBid={isPlacingBid}
+                isPayingDeposit={isPayingDeposit}
+                isPayingAuction={isPayingAuction}
+                isAutoBidEnabled={isAutoBidEnabled}
+                selectedPaymentMethod={selectedPaymentMethod}
+                bidAmountInput={bidAmountInput}
+                currentUserId={currentUserId}
+                isNewBidFlash={isNewBidFlash}
+                onPayDeposit={handlePayDeposit}
+                onPlaceBid={handlePlaceBid}
+                onPayAuction={async (transactionId, paymentMethod) => {
+                  try {
+                    setIsPayingAuction(true);
+                    const itemType = auction.listingType === "VEHICLE" ? "vehicle" : "battery";
+                    const transaction = await getPendingAuctionTransaction(auction.id, itemType);
+                    if (!transaction) {
+                      showError(t("auctions.errors.transactionNotFound", "Không tìm thấy giao dịch"));
+                      return;
+                    }
+                    await handlePayAuction(transaction.id, paymentMethod);
+                  } finally {
+                    setIsPayingAuction(false);
+                  }
                 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  >
-                    <Clock className="w-4 h-4" />
-                  </motion.div>
-                  <span className="text-xs font-semibold">
-                    {!isAuctionStarted()
-                      ? t(
-                          "auctions.timeUntilStart",
-                          "Thời gian đến khi bắt đầu"
-                        )
-                      : t("auctions.timeRemaining")}
-                  </span>
-                </div>
-                <div className="grid grid-cols-4 gap-2 text-center mb-3">
-                  {[
-                    { value: timeLeft.days, label: "Days" },
-                    { value: timeLeft.hours, label: "Hrs" },
-                    { value: timeLeft.minutes, label: "Mins" },
-                    { value: timeLeft.seconds, label: "Secs" },
-                  ].map((item, index) => (
-                    <motion.div
-                      key={item.label}
-                      className="bg-white/20 backdrop-blur-sm rounded-xl p-2 shadow-md"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      whileHover={{ scale: 1.05, y: -2 }}
-                    >
-                      <div className="text-xl font-bold">
-                        {String(item.value).padStart(2, "0")}
-                      </div>
-                      <div className="text-[10px] opacity-80 font-medium">
-                        {item.label}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-                {/* Auction Start Time */}
-                <div className="pt-3 border-t border-white/30 text-[11px] space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="opacity-90 font-medium">
-                      {!isAuctionStarted()
-                        ? t("auctions.willStart", "Sẽ bắt đầu")
-                        : t("auctions.started", "Đã bắt đầu")}
-                      :
-                    </span>
-                    <span className="font-bold">
-                      {formatDateTime(auction.auctionStartsAt)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="opacity-90 font-medium">
-                      {!isAuctionStarted()
-                        ? t("auctions.willEnd", "Sẽ kết thúc")
-                        : t("auctions.endTime", "Kết thúc")}
-                      :
-                    </span>
-                    <span className="font-bold">
-                      {formatDateTime(auction.auctionEndsAt)}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Bidding Card */}
-              <motion.div
-                className="bg-white/90 backdrop-blur-xl rounded-3xl border border-white/40 p-5 shadow-xl space-y-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <motion.div
-                  className={`transition-all duration-500 ${
-                    isNewBidFlash
-                      ? "bg-gradient-to-br from-green-50 to-emerald-50 -m-5 p-5 rounded-3xl"
-                      : ""
-                  }`}
-                  animate={isNewBidFlash ? { scale: [1, 1.02, 1] } : {}}
-                  transition={{ duration: 0.5 }}
-                >
-                  <p className="text-xs text-slate-500 mb-1 font-medium">
-                    {t("auctions.currentBid")}
-                  </p>
-                  <motion.p
-                    className={`text-2xl font-bold transition-all duration-500 ${
-                      isNewBidFlash ? "text-green-600" : "text-slate-900"
-                    }`}
-                    animate={isNewBidFlash ? { scale: [1, 1.08, 1] } : {}}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {formatAuctionPrice(currentBid)}
-                  </motion.p>
-                  {isNewBidFlash && (
-                    <motion.p
-                      className="text-xs text-green-600 mt-2 font-semibold flex items-center gap-1"
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <span className="text-sm">🔥</span>{" "}
-                      {t("auctions.newBid", "New bid placed!")}
-                    </motion.p>
-                  )}
-                </motion.div>
-
-                {timeLeft.isExpired ? (
-                  /* 
-                    Auction Ended - Show result based on userAuctionResult
-                    
-                    FLOW LOGIC:
-                    ===========
-                    Backend API trả về trường "userAuctionResult" với các giá trị:
-                    
-                    1. "WON" - Người dùng THẮNG đấu giá:
-                       - Là người đặt giá cao nhất khi auction kết thúc
-                       - Action: Phải thanh toán số tiền bid cuối cùng
-                       - UI: Hiển thị nút "Thanh toán ngay"
-                       - Payment flow: 
-                         * Click button → Tìm pending transaction
-                         * Gọi API /transactions/{id}/pay với paymentMethod: WALLET
-                         * Nếu thành công → Hoàn tất mua hàng
-                         * Nếu thiếu tiền → Link đến wallet để nạp tiền
-                    
-                    2. "LOST" - Người dùng THUA đấu giá:
-                       - Đã đặt bid nhưng không phải người cao nhất
-                       - Action: KHÔNG CẦN làm gì, backend tự động hoàn tiền cọc
-                       - UI: Hiển thị thông báo "Tiền cọc sẽ được hoàn trả"
-                    
-                    3. "NO_BIDS" - Đã đặt cọc nhưng KHÔNG ĐẶT GIÁ:
-                       - User đã pay deposit nhưng không bid lần nào
-                       - Action: KHÔNG CẦN làm gì, backend tự động hoàn tiền cọc
-                       - UI: Hiển thị thông báo "Tiền cọc sẽ được hoàn trả"
-                    
-                    4. null - CHƯA THAM GIA:
-                       - User chưa đặt cọc cho auction này
-                       - Action: Không có action nào
-                       - UI: Chỉ hiển thị "Đấu giá đã kết thúc"
-                    
-                    Backend tự động xử lý:
-                    - Xác định winner dựa trên highest bid
-                    - Tạo transaction cho winner (status: PENDING)
-                    - Hoàn tiền deposit cho losers (status: REFUNDED)
-                    - Update vehicle/battery status
-                  */
-                  <motion.div
-                    className="space-y-4"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    {auction.userAuctionResult === "WON" ? (
-                      /* Winner - Show payment option */
-                      <>
-                        <motion.div
-                          className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl shadow-lg"
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                        >
-                          <div className="flex items-start gap-3">
-                            <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-base font-bold text-green-900 mb-1">
-                                🎉{" "}
-                                {t(
-                                  "auctions.congratulations",
-                                  "Chúc mừng! Bạn đã thắng đấu giá!"
-                                )}
-                              </p>
-                              <p className="text-sm text-green-700">
-                                {t(
-                                  "auctions.winnerMessage",
-                                  "Vui lòng thanh toán để hoàn tất giao dịch"
-                                )}
-                              </p>
-                              <p className="text-lg font-bold text-green-900 mt-2">
-                                {t("auctions.finalPrice", "Giá cuối")}:{" "}
-                                {formatAuctionPrice(
-                                  currentBid || auction.startingPrice
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        </motion.div>
-
-                        {/* Payment method selector */}
-                        <div className="space-y-3">
-                          <p className="text-sm font-semibold text-slate-700">
-                            {t("auctions.selectPaymentMethod", "Chọn phương thức thanh toán")}
-                          </p>
-                          <div className="grid grid-cols-2 gap-3">
-                            <motion.button
-                              onClick={() => setSelectedPaymentMethod("WALLET")}
-                              className={`p-3 rounded-xl border-2 transition-all ${
-                                selectedPaymentMethod === "WALLET"
-                                  ? "border-blue-500 bg-blue-50"
-                                  : "border-slate-200 bg-white hover:border-blue-300"
-                              }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <Wallet className={`w-6 h-6 mx-auto mb-1 ${
-                                selectedPaymentMethod === "WALLET" ? "text-blue-600" : "text-slate-400"
-                              }`} />
-                              <p className={`text-xs font-bold ${
-                                selectedPaymentMethod === "WALLET" ? "text-blue-900" : "text-slate-600"
-                              }`}>
-                                {t("checkout.wallet", "Ví")}
-                              </p>
-                            </motion.button>
-                            <motion.button
-                              onClick={() => setSelectedPaymentMethod("MOMO")}
-                              className={`p-3 rounded-xl border-2 transition-all ${
-                                selectedPaymentMethod === "MOMO"
-                                  ? "border-pink-500 bg-pink-50"
-                                  : "border-slate-200 bg-white hover:border-pink-300"
-                              }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <div className={`w-6 h-6 mx-auto mb-1 rounded-full flex items-center justify-center font-bold text-sm ${
-                                selectedPaymentMethod === "MOMO" ? "bg-pink-600 text-white" : "bg-slate-200 text-slate-500"
-                              }`}>
-                                M
-                              </div>
-                              <p className={`text-xs font-bold ${
-                                selectedPaymentMethod === "MOMO" ? "text-pink-900" : "text-slate-600"
-                              }`}>
-                                MoMo
-                              </p>
-                            </motion.button>
-                          </div>
-                        </div>
-
-                        <motion.button
-                          onClick={async () => {
-                            try {
-                              setIsPayingAuction(true);
-                              // Get pending transaction for this item
-                              const itemType =
-                                auction.listingType === "VEHICLE"
-                                  ? "vehicle"
-                                  : "battery";
-                              const transaction =
-                                await getPendingAuctionTransaction(
-                                  auction.id,
-                                  itemType
-                                );
-
-                              if (!transaction) {
-                                showError(
-                                  t(
-                                    "auctions.errors.transactionNotFound",
-                                    "Không tìm thấy giao dịch"
-                                  )
-                                );
-                                return;
-                              }
-
-                              await handlePayAuction(transaction.id, selectedPaymentMethod);
-                            } catch (error) {
-                              console.error("Payment error:", error);
-                            } finally {
-                              setIsPayingAuction(false);
-                            }
-                          }}
-                          disabled={isPayingAuction}
-                          className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {isPayingAuction ? (
-                            <>
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              {t("wallet.processing", "Đang xử lý...")}
-                            </>
-                          ) : (
-                            <>
-                              <Wallet className="w-5 h-5" />
-                              {t("auctions.payNow", "Thanh toán ngay")} - {selectedPaymentMethod === "WALLET" ? t("checkout.wallet", "Ví") : "MoMo"}
-                            </>
-                          )}
-                        </motion.button>
-                      </>
-                    ) : auction.userAuctionResult === "LOST" ? (
-                      /* Lost - Show refund message */
-                      <motion.div
-                        className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-yellow-900 mb-1">
-                              {t(
-                                "auctions.auctionLost",
-                                "Rất tiếc! Bạn đã không thắng đấu giá"
-                              )}
-                            </p>
-                            <p className="text-xs text-yellow-700">
-                              {t(
-                                "auctions.depositRefunded",
-                                "Tiền cọc sẽ được hoàn trả vào ví của bạn"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : auction.userAuctionResult === "NO_BIDS" ? (
-                      /* No bids - Show refund message */
-                      <motion.div
-                        className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-blue-900 mb-1">
-                              {t(
-                                "auctions.noBidsPlaced",
-                                "Bạn chưa đặt giá nào"
-                              )}
-                            </p>
-                            <p className="text-xs text-blue-700">
-                              {t(
-                                "auctions.depositRefunded",
-                                "Tiền cọc sẽ được hoàn trả vào ví của bạn"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      /* Default - Just auction ended */
-                      <motion.div
-                        className="p-4 bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200 rounded-2xl"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900 mb-1">
-                              {t("auctions.auctionEnded")}
-                            </p>
-                            <p className="text-xs text-gray-600">
-                              {t("auctions.auctionEndedDesc")}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </motion.div>
-                ) : !hasDeposit ? (
-                  <>
-                    {!isAuctionStarted() ? (
-                      <motion.div
-                        className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl shadow-sm"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Clock className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-yellow-900 mb-1">
-                              {t("auctions.auctionNotStarted")}
-                            </p>
-                            <p className="text-xs text-yellow-700">
-                              {t("auctions.auctionNotStartedDesc")}{" "}
-                              {formatDateTime(auction.auctionStartsAt)}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl shadow-sm"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-blue-900 mb-1">
-                              {t("auctions.depositRequired")}
-                            </p>
-                            <p className="text-xs text-blue-700">
-                              {t(
-                                "auctions.depositMessagePart1",
-                                "Pay a deposit of"
-                              )}{" "}
-                              {formatAuctionPrice(auction.depositAmount)}{" "}
-                              {t(
-                                "auctions.depositMessagePart2",
-                                "to start bidding"
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-
-                    <motion.button
-                      onClick={handlePayDeposit}
-                      disabled={isPayingDeposit || !isAuctionStarted()}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {isPayingDeposit ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          {t("wallet.processing")}
-                        </>
-                      ) : !isAuctionStarted() ? (
-                        <>
-                          <Clock className="w-5 h-5" />
-                          {t("auctions.notStartedYet")}
-                        </>
-                      ) : (
-                        <>
-                          <Wallet className="w-5 h-5" />
-                          {t("auctions.payDeposit")} -{" "}
-                          {formatAuctionPrice(auction.depositAmount)}
-                        </>
-                      )}
-                    </motion.button>
-                  </>
-                ) : (
-                  <>
-                    <motion.div
-                      className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl shadow-sm"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                    >
-                      <div className="flex items-center gap-2 text-green-700">
-                        <CheckCircle className="w-5 h-5" />
-                        <span className="text-sm font-semibold">
-                          {t("auctions.depositPaid")}
-                        </span>
-                      </div>
-                    </motion.div>
-
-                    {/* Auto-bid checkbox */}
-                    <motion.div
-                      className="flex items-center gap-3 p-3 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
-                      <input
-                        type="checkbox"
-                        id="auto-bid"
-                        checked={isAutoBidEnabled}
-                        onChange={(e) => setIsAutoBidEnabled(e.target.checked)}
-                        className="w-5 h-5 text-purple-600 border-purple-300 rounded focus:ring-purple-500 cursor-pointer"
-                      />
-                      <label htmlFor="auto-bid" className="text-sm font-semibold text-purple-900 cursor-pointer flex-1">
-                         {t("auctions.autoBid", "Tự động đấu giá")}
-                      </label>
-                      {isAutoBidEnabled && (
-                        <motion.span
-                          className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full font-bold"
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                        >
-                          ON
-                        </motion.span>
-                      )}
-                    </motion.div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-2">
-                        {t("auctions.bidAmount")}
-                      </label>
-                      
-                      {/* Quick multiply buttons */}
-                      <div className="grid grid-cols-4 gap-2 mb-3">
-                        {[2, 3, 5, 10].map((multiplier) => (
-                          <motion.button
-                            key={multiplier}
-                            onClick={() => {
-                              const currentInputAmount = Number(bidAmountInput.rawValue) || currentBid;
-                              const newAmount = currentInputAmount + (auction.bidIncrement * multiplier);
-                              bidAmountInput.setValue(String(newAmount));
-                            }}
-                            className="py-2 px-3 bg-gradient-to-r from-indigo-100 to-purple-100 hover:from-indigo-200 hover:to-purple-200 text-indigo-700 font-bold text-sm rounded-xl border border-indigo-200 transition-all shadow-sm"
-                            whileHover={{ scale: 1.05, y: -2 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            ×{multiplier}
-                          </motion.button>
-                        ))}
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={bidAmountInput.displayValue}
-                          onChange={(e) =>
-                            bidAmountInput.handleChange(e.target.value)
-                          }
-                          className="w-full px-4 py-3 border-2 border-blue-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-bold bg-white/50 backdrop-blur-sm transition-all"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
-                          VND
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2 font-medium">
-                        {t("auctions.minimumBid")}:{" "}
-                        {formatAuctionPrice(currentBid + auction.bidIncrement)}
-                      </p>
-                    </div>
-
-                    <motion.button
-                      onClick={handlePlaceBid}
-                      disabled={
-                        isPlacingBid ||
-                        Number(bidAmountInput.rawValue) <
-                          currentBid + auction.bidIncrement ||
-                        timeLeft.isExpired
-                      }
-                      className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {isPlacingBid ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          {t("wallet.processing")}
-                        </>
-                      ) : (
-                        <>
-                          <Gavel className="w-5 h-5" />
-                          {t("auctions.placeBid")}
-                        </>
-                      )}
-                    </motion.button>
-
-                    {/* Buy Now button */}
-                    {!timeLeft.isExpired && auction.buyNowPrice && (
-                      <motion.button
-                        onClick={handleBuyNow}
-                        className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                      >
-                        <ShoppingCart className="w-5 h-5" />
-                        {t("auctions.buyNow", "Mua đứt")} - {formatAuctionPrice(auction.buyNowPrice)}
-                      </motion.button>
-                    )}
-                  </>
-                )}
-
-                {/* Auction Info */}
-                <div className="pt-4 border-t border-blue-200 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 font-medium">
-                      {t("auctions.startingPrice")}
-                    </span>
-                    <span className="font-bold text-slate-900">
-                      {formatAuctionPrice(auction.startingPrice)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 font-medium">
-                      {t("auctions.bidIncrement")}
-                    </span>
-                    <span className="font-bold text-slate-900">
-                      {formatAuctionPrice(auction.bidIncrement)}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
+                onBuyNow={handleBuyNow}
+                onToggleAutoBid={setIsAutoBidEnabled}
+                onPaymentMethodChange={setSelectedPaymentMethod}
+                isAuctionStarted={isAuctionStarted}
+                formatDateTime={formatDateTime}
+              />
             </motion.div>
           </div>
         </div>
@@ -1642,3 +1061,4 @@ export default function AuctionDetailPage({
     </div>
   );
 }
+
