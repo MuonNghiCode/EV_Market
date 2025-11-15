@@ -37,7 +37,7 @@ export interface LiveAuction {
   description: string
   price: number
   images: string[]
-  status: 'AUCTION_LIVE' | 'AVAILABLE' | 'SOLD' | 'DELISTED'
+  status: 'AUCTION_LIVE' | 'AVAILABLE' | 'SOLD' | 'DELISTED' | 'AUCTION_PAYMENT_PENDING'
   brand: string
   capacity?: number
   year: number

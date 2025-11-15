@@ -87,37 +87,61 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
         {t("auctions.biddingPanel", "Đấu giá")}
       </h2>
 
-      {/* Current Bid Display */}
-      <motion.div
-        className="mb-6 p-4 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border-2 border-blue-300 shadow-lg"
-        initial={{ scale: 0.95 }}
-        animate={{ scale: 1 }}
-      >
-        <p className="text-sm text-slate-600 font-medium mb-1">
-          {t("auctions.currentBid")}
-        </p>
-        <motion.p
-          className={`text-2xl font-bold transition-all duration-500 ${
-            isNewBidFlash ? "text-green-600" : "text-slate-900"
-          }`}
-          animate={isNewBidFlash ? { scale: [1, 1.08, 1] } : {}}
-          transition={{ duration: 0.5 }}
+      {/* SOLD Status Display - Show at top if sold */}
+      {auction.status === 'SOLD' ? (
+        <motion.div
+          className="p-6 bg-gradient-to-br from-red-50 to-rose-50 border-2 border-red-300 rounded-2xl shadow-lg"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
         >
-          {formatAuctionPrice(currentBid)}
-        </motion.p>
-        {isNewBidFlash && (
-          <motion.p
-            className="text-xs text-green-600 mt-2 font-semibold flex items-center gap-1"
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
+          <div className="flex items-start gap-3">
+            <CheckCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-lg font-bold text-red-900 mb-2">
+                {t("auctions.soldOut", "Đã bán")}
+              </p>
+              <p className="text-sm text-red-700">
+                {t(
+                  "auctions.soldOutMessage",
+                  "Sản phẩm đã được mua"
+                )}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      ) : (
+        <>
+          {/* Current Bid Display */}
+          <motion.div
+            className="mb-6 p-4 bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl border-2 border-blue-300 shadow-lg"
+            initial={{ scale: 0.95 }}
+            animate={{ scale: 1 }}
           >
-            <span className="text-sm">🔥</span>{" "}
-            {t("auctions.newBid", "New bid placed!")}
-          </motion.p>
-        )}
-      </motion.div>
+            <p className="text-sm text-slate-600 font-medium mb-1">
+              {t("auctions.currentBid")}
+            </p>
+            <motion.p
+              className={`text-2xl font-bold transition-all duration-500 ${
+                isNewBidFlash ? "text-green-600" : "text-slate-900"
+              }`}
+              animate={isNewBidFlash ? { scale: [1, 1.08, 1] } : {}}
+              transition={{ duration: 0.5 }}
+            >
+              {formatAuctionPrice(currentBid)}
+            </motion.p>
+            {isNewBidFlash && (
+              <motion.p
+                className="text-xs text-green-600 mt-2 font-semibold flex items-center gap-1"
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <span className="text-sm">🔥</span>{" "}
+                {t("auctions.newBid", "New bid placed!")}
+              </motion.p>
+            )}
+          </motion.div>
 
-      {timeLeft.isExpired ? (
+          {timeLeft.isExpired ? (
         /* 
           Auction Ended - Show result based on userAuctionResult
           
@@ -245,14 +269,7 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
               </div>
 
               <motion.button
-                onClick={async () => {
-                  try {
-                    // This will be handled by parent component's logic
-                    // The parent should import getPendingAuctionTransaction and call onPayAuction with transaction.id
-                  } catch (error) {
-                    console.error("Payment error:", error);
-                  }
-                }}
+                onClick={() => onPayAuction("", selectedPaymentMethod)}
                 disabled={isPayingAuction}
                 className="w-full py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-green-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 whileHover={{ scale: 1.02 }}
@@ -343,7 +360,7 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
           )}
         </motion.div>
       ) : !hasDeposit ? (
-        <>
+        <div className="space-y-4">
           {!isAuctionStarted() ? (
             <motion.div
               className="p-4 bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl shadow-sm"
@@ -416,9 +433,9 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
               </>
             )}
           </motion.button>
-        </>
+        </div>
       ) : (
-        <>
+        <div className="space-y-4">
           <motion.div
             className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl shadow-sm"
             initial={{ opacity: 0, scale: 0.95 }}
@@ -459,7 +476,7 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
             )}
           </motion.div>
 
-          <div>
+          <div className="space-y-3">
             <label className="block text-sm font-semibold text-slate-700 mb-2">
               {t("auctions.bidAmount")}
             </label>
@@ -526,21 +543,23 @@ const AuctionBiddingPanel: React.FC<AuctionBiddingPanelProps> = ({
               </>
             )}
           </motion.button>
+        </div>
+      )}
 
-          {/* Buy Now button */}
-          {!timeLeft.isExpired && auction.price && (
-            <motion.button
-              onClick={onBuyNow}
-              className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <ShoppingCart className="w-5 h-5" />
-              {t("auctions.buyNow", "Mua đứt")} - {formatAuctionPrice(auction.price)}
-            </motion.button>
-          )}
+      {/* Buy Now button - Show only after auction starts, for all users (no deposit required) */}
+      {!timeLeft.isExpired && auction.price && !['SOLD', 'AUCTION_PAYMENT_PENDING'].includes(auction.status) && isAuctionStarted() && (
+        <motion.button
+          onClick={onBuyNow}
+          className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 mt-4"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <ShoppingCart className="w-5 h-5" />
+          {t("auctions.buyNow")} - {formatAuctionPrice(auction.price)}
+        </motion.button>
+      )}
         </>
       )}
 
