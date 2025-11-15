@@ -70,10 +70,10 @@ export default function AuctionCountdownTimer({
       </div>
       <div className="grid grid-cols-4 gap-2 text-center mb-3">
         {[
-          { value: timeLeft.days, label: "Days" },
-          { value: timeLeft.hours, label: "Hrs" },
-          { value: timeLeft.minutes, label: "Mins" },
-          { value: timeLeft.seconds, label: "Secs" },
+          { value: timeLeft.days, label: t("common.days", "Days") },
+          { value: timeLeft.hours, label: t("common.hours", "Hrs") },
+          { value: timeLeft.minutes, label: t("common.minutes", "Mins") },
+          { value: timeLeft.seconds, label: t("common.seconds", "Secs") },
         ].map((item, index) => (
           <motion.div
             key={item.label}
@@ -107,7 +107,7 @@ export default function AuctionCountdownTimer({
           <span className="opacity-90 font-medium">
             {!isAuctionStarted
               ? t("auctions.willEnd", "Sẽ kết thúc")
-              : t("auctions.endTime", "Kết thúc")}
+              : t("auctions.ends", "Kết thúc")}
             :
           </span>
           <span className="font-bold">{formatDateTime(auctionEndsAt)}</span>

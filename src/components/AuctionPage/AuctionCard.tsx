@@ -6,26 +6,45 @@ import Link from "next/link";
 import { Clock, Zap, Battery, Car, ShieldCheck } from "lucide-react";
 import { LiveAuction } from "@/types/auction";
 import { formatAuctionPrice, getTimeRemaining } from "@/services";
+import { useI18nContext } from "@/providers/I18nProvider";
 
 interface AuctionCardProps {
   auction: LiveAuction;
 }
 
 export default function AuctionCard({ auction }: AuctionCardProps) {
-  const [timeLeft, setTimeLeft] = useState(
-    getTimeRemaining(auction.auctionEndsAt)
-  );
+  const { t } = useI18nContext();
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const startTime = new Date(auction.auctionStartsAt);
+    const now = new Date();
+    
+    // If auction hasn't started yet, countdown to start time
+    if (now < startTime) {
+      return getTimeRemaining(auction.auctionStartsAt);
+    }
+    // If auction has started, countdown to end time
+    return getTimeRemaining(auction.auctionEndsAt);
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeLeft(getTimeRemaining(auction.auctionEndsAt));
+      const startTime = new Date(auction.auctionStartsAt);
+      const now = new Date();
+      
+      // If auction hasn't started yet, countdown to start time
+      if (now < startTime) {
+        setTimeLeft(getTimeRemaining(auction.auctionStartsAt));
+      } else {
+        // If auction has started, countdown to end time
+        setTimeLeft(getTimeRemaining(auction.auctionEndsAt));
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [auction.auctionEndsAt]);
+  }, [auction.auctionStartsAt, auction.auctionEndsAt]);
 
   const formatTimeLeft = () => {
-    if (timeLeft.isExpired) return "Đã kết thúc";
+    if (timeLeft.isExpired) return t("auctions.ended", "Đã kết thúc");
     if (timeLeft.days > 0) return `${timeLeft.days}d ${timeLeft.hours}h`;
     if (timeLeft.hours > 0) return `${timeLeft.hours}h ${timeLeft.minutes}m`;
     return `${timeLeft.minutes}m ${timeLeft.seconds}s`;
@@ -81,7 +100,7 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <Zap className="w-3.5 h-3.5 mr-1" fill="currentColor" />
-              LIVE
+              {t("auctions.live", "LIVE")}
             </motion.span>
             {auction.isVerified && (
               <motion.span
@@ -91,7 +110,7 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
                 transition={{ duration: 0.5, delay: 0.25 }}
               >
                 <ShieldCheck className="w-3.5 h-3.5 mr-1" />
-                Verified
+                {t("common.verified", "Verified")}
               </motion.span>
             )}
           </div>
@@ -112,7 +131,7 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
               transition={{ duration: 0.5, delay: 0.35 }}
             >
               <Icon className="w-3.5 h-3.5 mr-1" />
-              {isVehicle ? "Vehicle" : "Battery"}
+              {isVehicle ? t("browse.vehicles", "Vehicle") : t("browse.batteries", "Battery")}
             </motion.span>
           </div>
         </motion.div>
@@ -155,13 +174,13 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
             transition={{ duration: 0.5, delay: 0.26 }}
           >
             <div className="flex flex-col items-start">
-              <span className="text-xs text-slate-500">Deposit</span>
+              <span className="text-xs text-slate-500">{t("auctions.depositRequired", "Deposit")}</span>
               <span className="text-sm font-semibold text-blue-600">
                 {formatAuctionPrice(auction.depositAmount)}
               </span>
             </div>
             <div className="flex flex-col items-end">
-              <span className="text-xs text-slate-500">Bid increment</span>
+              <span className="text-xs text-slate-500">{t("auctions.bidIncrement", "Bid increment")}</span>
               <span className="text-sm font-semibold text-slate-700">
                 {formatAuctionPrice(auction.bidIncrement)}
               </span>
@@ -194,7 +213,7 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
                 <p className="text-xs font-medium text-slate-700 truncate">
                   {auction.seller.name}
                 </p>
-                <p className="text-xs text-slate-500">Seller</p>
+                <p className="text-xs text-slate-500">{t("seller.seller", "Seller")}</p>
               </div>
             </motion.div>
           )}

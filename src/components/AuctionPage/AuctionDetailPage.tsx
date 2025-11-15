@@ -294,6 +294,27 @@ export default function AuctionDetailPage({
     return () => clearInterval(timer);
   }, [auction]);
 
+  // Auto-reload when auction ends to show winner checkout button
+  useEffect(() => {
+    if (!auction) return;
+    
+    // Check if auction just expired
+    if (timeLeft.isExpired && timeLeft.total <= 0) {
+      const startTime = new Date(auction.auctionStartsAt);
+      const now = new Date();
+      
+      // Only reload if auction has started (not just waiting to start)
+      if (now >= startTime) {
+        // Reload after 2 seconds to allow animation to complete
+        const reloadTimer = setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+        
+        return () => clearTimeout(reloadTimer);
+      }
+    }
+  }, [timeLeft.isExpired, timeLeft.total, auction]);
+
   // Realtime bidding subscription
   useEffect(() => {
    
@@ -510,23 +531,30 @@ export default function AuctionDetailPage({
     try {
       setIsPayingAuction(true);
 
-   
+      // Get the pending transaction for this auction
+      const itemType = auction?.listingType === "VEHICLE" ? "vehicle" : "battery";
+      const transaction = await getPendingAuctionTransaction(auctionId, itemType);
+      
+      if (!transaction) {
+        showError(t("auctions.errors.transactionNotFound", "Không tìm thấy giao dịch"));
+        return;
+      }
 
-      const response = await payAuctionTransaction(transactionId, {
+      // Pay the transaction with selected payment method
+      const response = await payAuctionTransaction(transaction.id, {
         paymentMethod,
       });
 
-
+      // Handle payment response based on gateway
       if (response.data.paymentGateway === "WALLET") {
         showSuccess(t("auctions.paymentSuccess", "Thanh toán thành công!"));
-        // Refresh auction details
+        // Refresh auction details to show updated status
         const listingType = auction?.listingType;
         if (listingType) {
           const { data } = await getAuctionDetail(listingType, auctionId);
           setAuction(data);
         }
       } else if (response.data.paymentDetail?.payUrl) {
-      
         // Redirect to payment gateway (for MOMO)
         window.location.href = response.data.paymentDetail.payUrl;
       }
@@ -574,7 +602,7 @@ export default function AuctionDetailPage({
           )
         );
         
-        // Refresh auction details to show updated status
+        // Refresh auction details to show SOLD status and buyer info
         const { data } = await getAuctionDetail(auction.listingType, auctionId);
         setAuction(data);
       }
@@ -621,16 +649,7 @@ export default function AuctionDetailPage({
     <div className="min-h-screen pt-25 w-full bg-transparent">
       {/* Compact Header */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-8 pt-6 pb-4">
-        <motion.button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors group"
-          whileHover={{ x: -4 }}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-        >
-          <ArrowLeft className="w-5 h-5 group-hover:text-blue-600" />
-          <span className="font-semibold">Back to Auctions</span>
-        </motion.button>
+
 
         <div className="flex items-center gap-3">
           <motion.div
@@ -639,7 +658,7 @@ export default function AuctionDetailPage({
             transition={{ repeat: Infinity, duration: 2 }}
           >
             <Zap className="w-3.5 h-3.5" fill="currentColor" />
-            LIVE
+            {t("auctions.live", "LIVE")}
           </motion.div>
           {auction.isVerified && (
             <motion.div
@@ -648,7 +667,7 @@ export default function AuctionDetailPage({
               animate={{ opacity: 1, x: 0 }}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              Verified
+              {t("common.verified", "Verified")}
             </motion.div>
           )}
         </div>
@@ -700,7 +719,7 @@ export default function AuctionDetailPage({
                     whileHover={{ scale: 1.03, y: -2 }}
                   >
                     <p className="text-xs text-blue-600 font-semibold mb-1">
-                      Mileage
+                      {t("vehicleDetail.mileage", "Mileage")}
                     </p>
                     <p className="text-base font-bold text-slate-900">
                       {auction.mileage.toLocaleString()} km
@@ -713,7 +732,7 @@ export default function AuctionDetailPage({
                     whileHover={{ scale: 1.03, y: -2 }}
                   >
                     <p className="text-xs text-green-600 font-semibold mb-1">
-                      Battery
+                      {t("batteryDetail.capacity", "Battery")}
                     </p>
                     <p className="text-base font-bold text-slate-900">
                       {auction.capacity} kWh
@@ -726,7 +745,7 @@ export default function AuctionDetailPage({
                     whileHover={{ scale: 1.03, y: -2 }}
                   >
                     <p className="text-xs text-green-600 font-semibold mb-1">
-                      Health
+                      {t("batteryDetail.health", "Health")}
                     </p>
                     <p className="text-base font-bold text-green-600">
                       {auction.health}%
@@ -738,10 +757,10 @@ export default function AuctionDetailPage({
                   whileHover={{ scale: 1.03, y: -2 }}
                 >
                   <p className="text-xs text-purple-600 font-semibold mb-1">
-                    Type
+                    {t("browse.productType", "Type")}
                   </p>
                   <p className="text-base font-bold text-slate-900">
-                    {isVehicle ? "Vehicle" : "Battery"}
+                    {isVehicle ? t("browse.vehicles", "Vehicle") : t("browse.batteries", "Battery")}
                   </p>
                 </motion.div>
               </div>
@@ -856,85 +875,135 @@ export default function AuctionDetailPage({
                     {auction.bids && auction.bids.length > 0 ? (
                       <>
                         <p className="text-sm text-slate-500 mb-3">
-                          {auction.bids.length}{" "}
                           {t(
-                            auction.bids.length === 1
-                              ? "auctions.bidPlacedSingular"
-                              : "auctions.bidsPlaced",
-                            auction.bids.length === 1
-                              ? "bid placed"
-                              : "bids placed"
+                            "auctions.topBidders",
+                            "Top 5 Highest Bidders"
                           )}
                         </p>
-                        {auction.bids
-                          .sort(
-                            (a, b) =>
-                              new Date(b.createdAt).getTime() -
-                              new Date(a.createdAt).getTime()
-                          )
-                          .map((bid, idx) => (
-                            <motion.div
-                              key={bid.id}
-                              className={`flex items-center justify-between p-3 rounded-xl border shadow-sm ${
-                                idx === 0
-                                  ? "bg-gradient-to-br from-green-50 to-emerald-50 border-green-200"
-                                  : "bg-gradient-to-br from-slate-50 to-blue-50 border-slate-200"
-                              }`}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.3, delay: idx * 0.05 }}
-                              whileHover={{
-                                scale: 1.01,
-                                boxShadow:
-                                  idx === 0
-                                    ? "0 6px 16px rgba(34, 197, 94, 0.15)"
-                                    : "0 4px 12px rgba(0, 0, 0, 0.05)",
-                              }}
-                            >
-                              <div className="flex items-center gap-3">
-                                <motion.div
-                                  className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                                    idx === 0 ? "bg-green-100" : "bg-blue-100"
-                                  }`}
-                                  whileHover={{ scale: 1.1, rotate: 5 }}
-                                >
-                                  {idx === 0 ? (
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                  ) : (
-                                    <User className="w-4 h-4 text-blue-600" />
-                                  )}
-                                </motion.div>
-                                <div>
-                                  <p className="text-sm font-semibold text-slate-900">
-                                    {bid.bidder?.name ||
-                                      `${t(
-                                        "auctions.bidder",
-                                        "Bidder"
-                                      )} ${bid.bidderId.slice(0, 8)}...`}
-                                    {idx === 0 && (
-                                      <span className="ml-2 text-green-600 font-bold text-xs">
-                                        •{" "}
-                                        {t(
-                                          "auctions.highestBid",
-                                          "Highest Bid"
-                                        )}
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="text-xs text-slate-500">
-                                    {formatDateTime(bid.createdAt)}
-                                  </p>
-                                </div>
-                              </div>
-                              <p
-                                className={`text-base font-bold ${
-                                  idx === 0 ? "text-green-600" : "text-blue-600"
-                                }`}
+                        {(() => {
+                          // Group bids by bidderId and get highest bid for each user
+                          const bidderMap = new Map<string, typeof auction.bids[0]>();
+                          
+                          auction.bids.forEach((bid) => {
+                            const existingBid = bidderMap.get(bid.bidderId);
+                            if (!existingBid || bid.amount > existingBid.amount) {
+                              bidderMap.set(bid.bidderId, bid);
+                            }
+                          });
+
+                          // Convert to array, sort by amount descending, take top 5
+                          const topBids = Array.from(bidderMap.values())
+                            .sort((a, b) => b.amount - a.amount)
+                            .slice(0, 5);
+
+                          // Rank styling config
+                          const getRankStyle = (rank: number) => {
+                            switch (rank) {
+                              case 1:
+                                return {
+                                  bg: "bg-gradient-to-br from-yellow-50 to-amber-50",
+                                  border: "border-yellow-300",
+                                  iconBg: "bg-yellow-100",
+                                  iconColor: "text-yellow-600",
+                                  rankBg: "bg-yellow-500",
+                                  rankText: "text-white",
+                                  priceColor: "text-yellow-600",
+                                  shadow: "0 6px 16px rgba(234, 179, 8, 0.2)"
+                                };
+                              case 2:
+                                return {
+                                  bg: "bg-gradient-to-br from-slate-50 to-gray-100",
+                                  border: "border-slate-300",
+                                  iconBg: "bg-slate-200",
+                                  iconColor: "text-slate-600",
+                                  rankBg: "bg-slate-400",
+                                  rankText: "text-white",
+                                  priceColor: "text-slate-600",
+                                  shadow: "0 4px 12px rgba(148, 163, 184, 0.15)"
+                                };
+                              case 3:
+                                return {
+                                  bg: "bg-gradient-to-br from-orange-50 to-amber-50",
+                                  border: "border-orange-300",
+                                  iconBg: "bg-orange-100",
+                                  iconColor: "text-orange-600",
+                                  rankBg: "bg-orange-500",
+                                  rankText: "text-white",
+                                  priceColor: "text-orange-600",
+                                  shadow: "0 4px 12px rgba(249, 115, 22, 0.15)"
+                                };
+                              default:
+                                return {
+                                  bg: "bg-gradient-to-br from-blue-50 to-indigo-50",
+                                  border: "border-blue-200",
+                                  iconBg: "bg-blue-100",
+                                  iconColor: "text-blue-600",
+                                  rankBg: "bg-blue-500",
+                                  rankText: "text-white",
+                                  priceColor: "text-blue-600",
+                                  shadow: "0 4px 12px rgba(59, 130, 246, 0.1)"
+                                };
+                            }
+                          };
+
+                          return topBids.map((bid, idx) => {
+                            const rank = idx + 1;
+                            const style = getRankStyle(rank);
+                            
+                            return (
+                              <motion.div
+                                key={bid.id}
+                                className={`flex items-center justify-between p-3 rounded-xl border-2 shadow-sm ${style.bg} ${style.border}`}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                whileHover={{
+                                  scale: 1.02,
+                                  boxShadow: style.shadow,
+                                }}
                               >
-                                {formatAuctionPrice(bid.amount)}
-                              </p>
-                            </motion.div>
-                          ))}
+                                <div className="flex items-center gap-3">
+                                  {/* Rank Badge */}
+                                  <motion.div
+                                    className={`w-10 h-10 rounded-full ${style.rankBg} ${style.rankText} flex items-center justify-center font-bold text-sm shadow-md`}
+                                    whileHover={{ scale: 1.15, rotate: 5 }}
+                                  >
+                                    {rank}
+                                  </motion.div>
+                                  
+                                  {/* User Avatar/Icon */}
+                                  <motion.div
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center ${style.iconBg}`}
+                                    whileHover={{ scale: 1.1 }}
+                                  >
+                                    <User className={`w-4 h-4 ${style.iconColor}`} />
+                                  </motion.div>
+                                  
+                                  {/* User Info */}
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                                      {bid.bidder?.name || t("auctions.anonymousBidder", "Anonymous Bidder")}
+                                      {rank === 1 && (
+                                        <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500 text-white text-xs font-bold rounded-full">
+                                          <CheckCircle className="w-3 h-3" />
+                                          {t("auctions.leading", "Leading")}
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      {t("auctions.highestUserBid", "Highest bid")}
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                {/* Bid Amount */}
+                                <p className={`text-base font-bold ${style.priceColor}`}>
+                                  {formatAuctionPrice(bid.amount)}
+                                </p>
+                              </motion.div>
+                            );
+                          });
+                        })()}
                       </>
                     ) : (
                       <motion.div
@@ -1010,13 +1079,15 @@ export default function AuctionDetailPage({
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
-              {/* Countdown Timer */}
-              <AuctionCountdownTimer
-                timeLeft={timeLeft}
-                auctionStartsAt={auction.auctionStartsAt}
-                auctionEndsAt={auction.auctionEndsAt}
-                isAuctionStarted={isAuctionStarted()}
-              />
+              {/* Countdown Timer - Hide when SOLD */}
+              {auction.status !== 'SOLD' && (
+                <AuctionCountdownTimer
+                  timeLeft={timeLeft}
+                  auctionStartsAt={auction.auctionStartsAt}
+                  auctionEndsAt={auction.auctionEndsAt}
+                  isAuctionStarted={isAuctionStarted()}
+                />
+              )}
 
               {/* Bidding Panel */}
               <AuctionBiddingPanel
@@ -1034,20 +1105,7 @@ export default function AuctionDetailPage({
                 isNewBidFlash={isNewBidFlash}
                 onPayDeposit={handlePayDeposit}
                 onPlaceBid={handlePlaceBid}
-                onPayAuction={async (transactionId, paymentMethod) => {
-                  try {
-                    setIsPayingAuction(true);
-                    const itemType = auction.listingType === "VEHICLE" ? "vehicle" : "battery";
-                    const transaction = await getPendingAuctionTransaction(auction.id, itemType);
-                    if (!transaction) {
-                      showError(t("auctions.errors.transactionNotFound", "Không tìm thấy giao dịch"));
-                      return;
-                    }
-                    await handlePayAuction(transaction.id, paymentMethod);
-                  } finally {
-                    setIsPayingAuction(false);
-                  }
-                }}
+                onPayAuction={handlePayAuction}
                 onBuyNow={handleBuyNow}
                 onToggleAutoBid={setIsAutoBidEnabled}
                 onPaymentMethodChange={setSelectedPaymentMethod}
