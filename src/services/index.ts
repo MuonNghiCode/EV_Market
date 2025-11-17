@@ -105,8 +105,40 @@ export {
   getPendingAuctionTransaction,
   shipTransaction,
   confirmReceipt,
-  disputeTransaction
+  disputeTransaction,
+  rejectTransaction
 } from './Transaction'
+
+// Export Appointment services
+export {
+  getMyAppointments,
+  proposeAppointmentDate,
+  confirmAppointment,
+  cancelAppointment,
+  cancelAppointmentWithRefund,
+  formatAppointmentDate,
+  canProposeDate,
+  canConfirmAppointment
+} from './Appointment'
+
+// Export Checkout services (updated with new deposit flow)
+export {
+  checkout,
+  payWithWallet,
+  initiateCheckout,
+  payRemainder,
+  requestRefund,
+  CheckoutError
+} from './Checkout'
+
+// Export Cart services
+export {
+  getCart,
+  addToCart,
+  removeFromCart,
+  checkoutCart,
+  getCartItemCount
+} from './Cart'
 
 // Export Auction services
 export {
@@ -187,7 +219,8 @@ export type {
   PayAuctionResponse,
   ShipTransactionResponse,
   ConfirmReceiptResponse,
-  DisputeTransactionResponse
+  DisputeTransactionResponse,
+  RejectTransactionResponse
 } from './Transaction'
 
 export type {

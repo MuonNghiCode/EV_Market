@@ -36,6 +36,7 @@
     "about": "Về chúng tôi",
     "browse": "Khám phá EV & Pin",
     "auctions": "Đấu giá",
+    "appointments": "Lịch hẹn",
     "sell": "Đăng tin bán EV"
   },
   "header": {
@@ -867,7 +868,7 @@
     "activeAuctions": "Phiên đấu giá đang hoạt động",
     "auctions": "phiên đấu giá",
     "loadError": "Không thể tải danh sách đấu giá",
-    "buyNow":"Mua ngay",
+    "buyNow": "Mua ngay",
     "endingSoon": "Sắp kết thúc",
     "newAuctions": "Đấu giá mới",
     "highestBid": "Giá cao nhất",

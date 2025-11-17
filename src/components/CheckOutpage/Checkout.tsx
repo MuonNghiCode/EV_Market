@@ -83,7 +83,9 @@ export default function Checkout() {
     vat: 0,
     discount: 0,
   });
-  const totalAmount = useMemo(() => {
+
+  // Calculate deposit amount (10% of total)
+  const fullAmount = useMemo(() => {
     return (
       orderPricing.productPrice +
       orderPricing.serviceFee +
@@ -91,6 +93,16 @@ export default function Checkout() {
       orderPricing.discount
     );
   }, [orderPricing]);
+
+  const depositAmount = useMemo(() => {
+    return Math.round(fullAmount * 0.1); // 10% deposit
+  }, [fullAmount]);
+
+  const remainderAmount = useMemo(() => {
+    return fullAmount - depositAmount; // 90% remaining
+  }, [fullAmount, depositAmount]);
+
+  const totalAmount = depositAmount; // User pays deposit first
 
   const orderData = {
     product: {
@@ -138,6 +150,9 @@ export default function Checkout() {
         orderPricing.discount > 0
           ? `-${formatCurrency(orderPricing.discount)}`
           : formatCurrency(0),
+      fullAmount: formatCurrency(fullAmount),
+      depositAmount: formatCurrency(depositAmount),
+      remainderAmount: formatCurrency(remainderAmount),
       total: formatCurrency(totalAmount),
     },
   };
@@ -190,11 +205,11 @@ export default function Checkout() {
 
           setVehicle(v as Vehicle);
           const price = (v?.price as number) || 0;
-          // Simple fee model: 1% service fee, 10% VAT on product price, no discount
+          // No additional fees - user pays exact listing price
           setOrderPricing({
             productPrice: price,
-            serviceFee: Math.round(price * 0.01),
-            vat: Math.round(price * 0.1),
+            serviceFee: 0, // Changed from 1%
+            vat: 0, // Changed from 10%
             discount: 0,
           });
         } else if (listingType === "BATTERY") {
@@ -216,10 +231,11 @@ export default function Checkout() {
 
           setBattery(b as Battery);
           const price = (b?.price as number) || 0;
+          // No additional fees - user pays exact listing price
           setOrderPricing({
             productPrice: price,
-            serviceFee: Math.round(price * 0.01),
-            vat: Math.round(price * 0.1),
+            serviceFee: 0, // Changed from 1%
+            vat: 0, // Changed from 10%
             discount: 0,
           });
         }
@@ -319,6 +335,13 @@ export default function Checkout() {
     // Proceed with payment directly without contract
     setProcessing(true);
     try {
+      console.log("Checkout request:", {
+        listingId,
+        listingType,
+        paymentMethod: selectedPaymentMethod === "qr" ? "MOMO" : "WALLET",
+        redirectUrl: `${window.location.origin}/checkout/result`,
+      });
+
       const res = await checkout({
         listingId,
         listingType: listingType as "VEHICLE" | "BATTERY",
@@ -326,13 +349,15 @@ export default function Checkout() {
         redirectUrl: `${window.location.origin}/checkout/result`,
       });
 
+      console.log("Checkout response:", res);
+
       if (selectedPaymentMethod === "qr") {
         // MOMO payment
         const source =
           res?.data && (res.data as any).paymentInfo
             ? (res.data as any).paymentInfo
             : (res?.data as any);
-        const payUrl = source?.payUrl;
+        const payUrl = source?.payUrl || source?.paymentUrl; // Support both payUrl and paymentUrl
         const deeplink = source?.deeplink;
         const qrCodeUrl = source?.qrCodeUrl;
         if (payUrl) {
@@ -356,8 +381,18 @@ export default function Checkout() {
             const bal = await getWalletBalance();
             setWalletBalance(bal.data?.availableBalance ?? null);
           } catch {}
-          toast.success(payRes?.message || "Thanh toán bằng ví thành công!");
-          setTimeout(() => router.push("/purchase-history"), 1500);
+          toast.success(
+            payRes?.message || "Thanh toán cọc bằng ví thành công!"
+          );
+          // Redirect to checkout result page with success status
+          setTimeout(
+            () =>
+              router.push(
+                "/checkout/result?resultCode=0&message=Thanh toán cọc thành công&orderId=" +
+                  transactionId
+              ),
+            1500
+          );
         } catch (e: any) {
           toast.error(e?.message || "Thanh toán ví thất bại");
         }
@@ -384,9 +419,35 @@ export default function Checkout() {
           className="space-y-12"
         >
           {/* Checkout Title */}
-          <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 drop-shadow-lg mb-8 tracking-tight">
-            {t("checkout.title")}
-          </h1>
+          <div className="mb-8">
+            <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 drop-shadow-lg tracking-tight">
+              {t("checkout.title")}
+            </h1>
+            <div className="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="h-5 w-5 text-yellow-400"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-yellow-800">
+                    <strong>Thanh toán cọc 10%:</strong> Bạn chỉ cần thanh toán
+                    10% giá trị đơn hàng để đặt cọc. Sau khi gặp và kiểm tra xe,
+                    bạn sẽ thanh toán 90% còn lại nếu chấp nhận mua.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Order Summary Section */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -475,6 +536,27 @@ export default function Checkout() {
                     </p>
                   </div>
                 </div>
+
+                {/* Price Breakdown */}
+                <div className="mt-6 pt-6 border-t border-blue-200 space-y-3">
+                  <div className="flex justify-between text-base text-slate-700">
+                    <span>Tổng giá trị:</span>
+                    <span className="font-semibold">
+                      {orderData.breakdown.fullAmount}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-lg font-bold text-green-600 bg-green-50 p-3 rounded-lg">
+                    <span>Cọc 10% (thanh toán ngay):</span>
+                    <span>{orderData.breakdown.depositAmount}</span>
+                  </div>
+                  <div className="flex justify-between text-base text-slate-600">
+                    <span>Còn lại 90% (thanh toán sau):</span>
+                    <span className="font-semibold">
+                      {orderData.breakdown.remainderAmount}
+                    </span>
+                  </div>
+                </div>
+
                 {productLoading && (
                   <div className="text-base text-blue-600 font-medium">
                     Đang tải sản phẩm...
@@ -585,7 +667,13 @@ export default function Checkout() {
                   onChange={(e) => setTermsAccepted(e.target.checked)}
                 />
                 <span className="text-base text-slate-700">
-                  Tôi đồng ý với{" "}
+                  Tôi đã hiểu và đồng ý với{" "}
+                  <strong>quy trình thanh toán cọc 10%</strong>. Sau khi thanh
+                  toán cọc, tôi sẽ đặt lịch hẹn với người bán để kiểm tra xe.
+                  Nếu xe đúng mô tả, tôi sẽ thanh toán 90% còn lại.
+                  <br />
+                  <br />
+                  Tôi cũng đồng ý với{" "}
                   <a
                     href="#"
                     className="text-indigo-600 hover:text-indigo-700 underline font-medium"
@@ -614,8 +702,15 @@ export default function Checkout() {
                   : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105"
               }`}
             >
-              {processing ? "Đang xử lý..." : t("checkout.completePayment")}
+              {processing
+                ? "Đang xử lý..."
+                : `Thanh toán cọc ${orderData.breakdown.depositAmount}`}
             </button>
+
+            <p className="mt-4 text-center text-sm text-slate-600">
+              Sau khi thanh toán cọc thành công, bạn sẽ được chuyển đến trang
+              đặt lịch hẹn
+            </p>
           </motion.div>
           {/* Security Information */}
           <motion.div

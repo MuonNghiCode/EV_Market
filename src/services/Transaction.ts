@@ -40,6 +40,7 @@ export interface Transaction {
   updatedAt: string
   vehicle: TransactionVehicle | null
   battery: TransactionBattery | null
+  batteries: TransactionBattery[]
   review: TransactionReview | null
 }
 
@@ -441,6 +442,55 @@ export const disputeTransaction = async (
     return data
   } catch (error) {
     console.error('Failed to dispute transaction:', error)
+    throw error
+  }
+}
+
+// Reject transaction/listing
+export interface RejectTransactionResponse {
+  message: string
+  data: {
+    transaction: {
+      id: string
+      buyerId: string
+      status: string
+      vehicleId: string | null
+      batteryId: string | null
+      finalPrice: number
+      paymentGateway: string
+      paymentDetail: any
+      createdAt: string
+      updatedAt: string
+    }
+  }
+}
+
+export const rejectTransaction = async (
+  transactionId: string
+): Promise<RejectTransactionResponse> => {
+  try {
+    const token = getAuthToken()
+    if (!token) {
+      throw new Error('No authentication token found')
+    }
+
+    const response = await fetch(`${API_BASE_URL}/transactions/${transactionId}/reject`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data
+  } catch (error) {
+    console.error('Failed to reject transaction:', error)
     throw error
   }
 }
