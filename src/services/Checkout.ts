@@ -85,6 +85,12 @@ export const checkout = async (payload: CheckoutRequest): Promise<CheckoutRespon
   try {
     const token = await ensureValidToken()
 
+    console.log('Sending checkout request:', {
+      url: `${API_BASE_URL}/checkout`,
+      payload,
+      hasToken: !!token
+    });
+
     const response = await fetch(`${API_BASE_URL}/checkout`, {
       method: 'POST',
       headers: {
@@ -104,12 +110,21 @@ export const checkout = async (payload: CheckoutRequest): Promise<CheckoutRespon
       json = { message: text }
     }
 
+    console.log('Checkout response:', {
+      status: response.status,
+      ok: response.ok,
+      body: json
+    });
+
     if (!response.ok) {
-      throw new CheckoutError(json?.message || 'Checkout failed', response.status)
+      const errorMessage = json?.message || json?.error || 'Checkout failed';
+      console.error('Checkout error:', errorMessage, json);
+      throw new CheckoutError(errorMessage, response.status)
     }
 
     return json as CheckoutResponse
   } catch (err: any) {
+    console.error('Checkout exception:', err);
     if (err instanceof CheckoutError) throw err
     if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
       throw new CheckoutError('Cannot connect to server. Please try again later.')

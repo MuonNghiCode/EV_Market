@@ -62,8 +62,8 @@ export interface PayRemainderPayload {
 export interface PayRemainderResponse {
   message: string;
   data: {
-    transactionId: string;
-    paymentInfo: PaymentInfo;
+    paymentUrl?: string;
+    transaction: Transaction;
   };
 }
 

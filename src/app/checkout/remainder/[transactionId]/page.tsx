@@ -56,9 +56,9 @@ export default function RemainderPaymentPage() {
         redirectUrl
       );
 
-      if (response.data.paymentInfo.payUrl) {
+      if (response.data.paymentUrl) {
         // Redirect to payment gateway
-        window.location.href = response.data.paymentInfo.payUrl;
+        window.location.href = response.data.paymentUrl;
       } else {
         throw new Error("No payment URL received");
       }

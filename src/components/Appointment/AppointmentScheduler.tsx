@@ -35,14 +35,15 @@ export default function AppointmentScheduler({
       Swal.fire({
         icon: "warning",
         title: "Thiếu thông tin",
-        text: "Vui lòng chọn đủ 3 khung giờ hẹn",
+        text: "Vui lòng chọn đủ 3 ngày hẹn",
       });
       return;
     }
 
-    // Convert to ISO format with timezone
+    // Convert to ISO format with timezone (set time to 10:00 AM by default)
     const isoDate = proposedDates.map((date) => {
       const d = new Date(date);
+      d.setHours(10, 0, 0, 0); // Set default time to 10:00 AM
       return d.toISOString();
     });
 
@@ -53,7 +54,7 @@ export default function AppointmentScheduler({
       Swal.fire({
         icon: "success",
         title: "Đã gửi đề xuất",
-        text: "Đã gửi 3 khung giờ hẹn. Chờ phía bên kia xác nhận.",
+        text: "Đã gửi 3 ngày hẹn. Chờ phía bên kia xác nhận.",
         timer: 2000,
       });
 
@@ -69,26 +70,26 @@ export default function AppointmentScheduler({
     }
   };
 
-  // Get minimum datetime (now + 1 hour)
-  const getMinDateTime = () => {
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
-    return now.toISOString().slice(0, 16);
+  // Get minimum date (tomorrow)
+  const getMinDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().slice(0, 10);
   };
 
-  // Get maximum datetime (created date + 7 days)
-  const getMaxDateTime = () => {
+  // Get maximum date (created date + 7 days)
+  const getMaxDate = () => {
     if (!createdAt) {
       // Nếu không có createdAt, giới hạn 7 ngày từ bây giờ
       const max = new Date();
       max.setDate(max.getDate() + 7);
-      return max.toISOString().slice(0, 16);
+      return max.toISOString().slice(0, 10);
     }
 
     const contractDate = new Date(createdAt);
     const maxDate = new Date(contractDate);
     maxDate.setDate(maxDate.getDate() + 7);
-    return maxDate.toISOString().slice(0, 16);
+    return maxDate.toISOString().slice(0, 10);
   };
 
   return (
@@ -106,9 +107,9 @@ export default function AppointmentScheduler({
       </div>
 
       <p className="text-gray-600 mb-6">
-        Vui lòng chọn 3 khuển giờ phù hợp để gặp gỡ và kiểm tra xe trong vòng{" "}
+        Vui lòng chọn 3 ngày phù hợp để gặp gỡ và kiểm tra xe trong vòng{" "}
         <strong>7 ngày kể từ ngày ký hợp đồng</strong>. Bên kia sẽ chọn 1 trong
-        3 khuển giờ bạn đề xuất.
+        3 ngày bạn đề xuất.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -116,14 +117,14 @@ export default function AppointmentScheduler({
           <div key={index} className="border border-gray-200 rounded-lg p-4">
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Calendar className="w-4 h-4" />
-              Lựa chọn {index + 1}
+              Ngày hẹn {index + 1}
             </label>
             <input
-              type="datetime-local"
+              type="date"
               value={proposedDates[index]}
               onChange={(e) => handleDateChange(index, e.target.value)}
-              min={getMinDateTime()}
-              max={getMaxDateTime()}
+              min={getMinDate()}
+              max={getMaxDate()}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -155,9 +156,9 @@ export default function AppointmentScheduler({
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
         <p className="text-sm text-blue-800">
           <strong>Lưu ý:</strong> Bạn chỉ có thể chọn lịch hẹn trong vòng 7 ngày
-          kể từ ngày ký hợp đồng. Sau khi bên kia xác nhận 1 trong 3 khuển giờ,
-          lịch hẹn sẽ được cố định. Hãy đảm bảo bạn có thể có mặt vào các khuển
-          giờ đã chọn.
+          kể từ ngày ký hợp đồng. Sau khi bên kia xác nhận 1 trong 3 ngày, lịch
+          hẹn sẽ được cố định. Hãy đảm bảo bạn có thể có mặt vào các ngày đã
+          chọn.
         </p>
       </div>
     </div>

@@ -335,12 +335,21 @@ export default function Checkout() {
     // Proceed with payment directly without contract
     setProcessing(true);
     try {
+      console.log("Checkout request:", {
+        listingId,
+        listingType,
+        paymentMethod: selectedPaymentMethod === "qr" ? "MOMO" : "WALLET",
+        redirectUrl: `${window.location.origin}/checkout/result`,
+      });
+
       const res = await checkout({
         listingId,
         listingType: listingType as "VEHICLE" | "BATTERY",
         paymentMethod: selectedPaymentMethod === "qr" ? "MOMO" : "WALLET",
         redirectUrl: `${window.location.origin}/checkout/result`,
       });
+
+      console.log("Checkout response:", res);
 
       if (selectedPaymentMethod === "qr") {
         // MOMO payment

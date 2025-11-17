@@ -243,9 +243,11 @@ export default function AppointmentDetailPage() {
           redirectUrl
         );
 
+        console.log("PayRemainder response:", paymentResponse);
+
         // Redirect to payment URL
-        if (paymentResponse.data.paymentInfo?.payUrl) {
-          window.location.href = paymentResponse.data.paymentInfo.payUrl;
+        if (paymentResponse.data.paymentUrl) {
+          window.location.href = paymentResponse.data.paymentUrl;
         } else {
           throw new Error("Payment URL not found");
         }
@@ -333,6 +335,27 @@ export default function AppointmentDetailPage() {
   const item =
     appointment.transaction?.vehicle || appointment.transaction?.battery;
   const transaction = appointment.transaction;
+
+  // Debug confirmation button visibility
+  console.log("Confirmation button debug:", {
+    hasConfirmedDate: !!appointment.confirmedDate,
+    confirmedDate: appointment.confirmedDate,
+    isPastConfirmedDate: appointment.confirmedDate
+      ? new Date(appointment.confirmedDate) <= new Date()
+      : false,
+    currentTime: new Date(),
+    userRole,
+    appointmentStatus: appointment.status,
+    transactionStatus: transaction?.status,
+    shouldShowButton: !!(
+      appointment.confirmedDate &&
+      userRole === "buyer" &&
+      appointment.status === "CONFIRMED" &&
+      new Date(appointment.confirmedDate) <= new Date() &&
+      (transaction?.status === "DEPOSIT_PAID" ||
+        transaction?.status === "APPOINTMENT_SCHEDULED")
+    ),
+  });
 
   // Debug
   console.log("Appointment data:", {
@@ -553,13 +576,13 @@ export default function AppointmentDetailPage() {
                 </div>
               )}
 
-              {/* Buyer Confirmation After Meeting - Show on the meeting day */}
+              {/* Buyer Confirmation After Meeting - Show from the meeting time onwards */}
               {appointment.confirmedDate &&
                 userRole === "buyer" &&
                 appointment.status === "CONFIRMED" &&
-                new Date(appointment.confirmedDate).toDateString() ===
-                  new Date().toDateString() &&
-                transaction?.status === "DEPOSIT_PAID" && (
+                new Date(appointment.confirmedDate) <= new Date() &&
+                (transaction?.status === "DEPOSIT_PAID" ||
+                  transaction?.status === "APPOINTMENT_SCHEDULED") && (
                   <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-6 mb-6">
                     <div className="mb-4">
                       <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-2">
@@ -656,9 +679,11 @@ export default function AppointmentDetailPage() {
                 </div>
               )}
 
-              {/* Cancel Button - Show only if appointment is PENDING or CONFIRMED */}
+              {/* Cancel Button - Show only if appointment is PENDING or CONFIRMED and not past confirmed date */}
               {(appointment.status === "PENDING" ||
-                appointment.status === "CONFIRMED") && (
+                (appointment.status === "CONFIRMED" &&
+                  appointment.confirmedDate &&
+                  new Date(appointment.confirmedDate) > new Date())) && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <button
                     onClick={handleCancel}

@@ -21,6 +21,7 @@ export default function CheckoutResultPage() {
   const [status, setStatus] = useState<"success" | "failed" | null>(null);
   const [appointmentId, setAppointmentId] = useState<string | null>(null);
   const [checkingAppointment, setCheckingAppointment] = useState(false);
+  const [isRemainderPayment, setIsRemainderPayment] = useState(false);
 
   useEffect(() => {
     // Parse MoMo callback params
@@ -29,6 +30,14 @@ export default function CheckoutResultPage() {
     const orderId = searchParams.get("orderId");
     const amount = searchParams.get("amount");
     const transId = searchParams.get("transId");
+    const appointmentIdParam = searchParams.get("appointmentId");
+
+    // Check if this is remainder payment (90%)
+    const isRemainder = !!appointmentIdParam;
+    setIsRemainderPayment(isRemainder);
+    if (appointmentIdParam) {
+      setAppointmentId(appointmentIdParam);
+    }
 
     // Log for debugging
     console.log("MoMo Callback:", {
@@ -37,13 +46,17 @@ export default function CheckoutResultPage() {
       orderId,
       amount,
       transId,
+      appointmentId: appointmentIdParam,
+      isRemainderPayment: isRemainder,
     });
 
     // resultCode = 0 means success
     if (resultCode === "0") {
       setStatus("success");
-      // Check if appointment was auto-created by backend
-      checkForAppointment();
+      // Check if appointment was auto-created by backend (only for deposit payment)
+      if (!isRemainder) {
+        checkForAppointment();
+      }
     } else {
       setStatus("failed");
     }
@@ -112,34 +125,61 @@ export default function CheckoutResultPage() {
 
               {/* Success Message */}
               <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-                Thanh toán cọc thành công!
+                {isRemainderPayment
+                  ? "Thanh toán thành công!"
+                  : "Thanh toán cọc thành công!"}
               </h1>
               <p className="text-center text-gray-600 mb-2">
-                Bạn đã thanh toán 10% tiền cọc thành công.
+                {isRemainderPayment
+                  ? "Bạn đã thanh toán đầy đủ cho giao dịch này."
+                  : "Bạn đã thanh toán 10% tiền cọc thành công."}
               </p>
               <p className="text-center text-sm text-gray-500 mb-8">
-                Tiếp theo, vui lòng đặt lịch hẹn với người bán để kiểm tra xe.
+                {isRemainderPayment
+                  ? "Giao dịch của bạn đã hoàn tất. Cảm ơn bạn đã mua hàng!"
+                  : "Tiếp theo, vui lòng đặt lịch hẹn với người bán để kiểm tra xe."}
               </p>
 
-              {/* Appointment Notice */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-blue-900 mb-2">
-                      Bước tiếp theo: Đặt lịch hẹn
-                    </h3>
-                    <p className="text-sm text-blue-800 mb-3">
-                      Để hoàn tất giao dịch, bạn cần:
-                    </p>
-                    <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                      <li>Đặt lịch hẹn gặp người bán tại bãi xe</li>
-                      <li>Kiểm tra và xác nhận tình trạng xe</li>
-                      <li>Thanh toán 90% còn lại nếu chấp nhận</li>
-                    </ol>
+              {/* Appointment Notice - Only show for deposit payment */}
+              {!isRemainderPayment && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-blue-900 mb-2">
+                        Bước tiếp theo: Đặt lịch hẹn
+                      </h3>
+                      <p className="text-sm text-blue-800 mb-3">
+                        Để hoàn tất giao dịch, bạn cần:
+                      </p>
+                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                        <li>Đặt lịch hẹn gặp người bán tại bãi xe</li>
+                        <li>Kiểm tra và xác nhận tình trạng xe</li>
+                        <li>Thanh toán 90% còn lại nếu chấp nhận</li>
+                      </ol>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Completion Notice - Only show for remainder payment */}
+              {isRemainderPayment && (
+                <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-green-900 mb-2">
+                        Giao dịch hoàn tất
+                      </h3>
+                      <p className="text-sm text-green-800">
+                        Bạn đã thanh toán đầy đủ cho xe. Vui lòng kiểm tra lịch
+                        sử mua hàng để xem chi tiết giao dịch và thông tin liên
+                        hệ người bán.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Transaction Details */}
               <div className="bg-gray-50 rounded-xl p-6 mb-8 space-y-3">
@@ -172,24 +212,35 @@ export default function CheckoutResultPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-4">
-                {/* Primary action: Create appointment */}
-                <button
-                  onClick={handleCreateAppointment}
-                  disabled={checkingAppointment}
-                  className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <Calendar className="w-5 h-5" />
-                  Đi đến trang lịch hẹn
-                </button>
-
-                {/* Secondary actions */}
-                <div className="flex flex-col sm:flex-row gap-4">
+                {/* Primary action: Different for deposit vs remainder */}
+                {!isRemainderPayment ? (
+                  <button
+                    onClick={handleCreateAppointment}
+                    disabled={checkingAppointment}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    Đi đến trang lịch hẹn
+                  </button>
+                ) : (
                   <button
                     onClick={() => router.push("/purchase-history")}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                    className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
                     Xem lịch sử mua hàng
                   </button>
+                )}
+
+                {/* Secondary actions */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  {!isRemainderPayment && (
+                    <button
+                      onClick={() => router.push("/purchase-history")}
+                      className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      Xem lịch sử mua hàng
+                    </button>
+                  )}
                   <button
                     onClick={() => router.push("/browse")}
                     className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl font-semibold transition-all duration-300"
