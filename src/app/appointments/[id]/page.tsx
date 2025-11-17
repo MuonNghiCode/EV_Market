@@ -8,6 +8,7 @@ import {
   canProposeDate,
   canConfirmAppointment,
   cancelAppointmentWithRefund,
+  payRemainder,
 } from "@/services";
 import {
   Appointment,
@@ -28,6 +29,8 @@ import {
   CheckCircle,
   ArrowLeft,
   XCircle,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -151,6 +154,134 @@ export default function AppointmentDetailPage() {
       } finally {
         setLoading(false);
       }
+    }
+  };
+
+  const handleAcceptInspection = async () => {
+    const result = await Swal.fire({
+      title: "Xác nhận xe đạt yêu cầu?",
+      html: `
+        <p class="mb-4">Sau khi xác nhận, bạn sẽ được chuyển đến trang thanh toán 90% còn lại.</p>
+        <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-left">
+          <p class="font-medium text-blue-800 mb-2">Thanh toán:</p>
+          <p class="text-sm text-blue-700">
+            Bạn đã cọc 10%. Cần thanh toán thêm 90% để hoàn tất giao dịch.
+          </p>
+        </div>
+      `,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#16a34a",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Đồng ý, thanh toán ngay",
+      cancelButtonText: "Để tôi kiểm tra lại",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        setLoading(true);
+        const transactionId = appointment?.transactionId;
+        if (!transactionId) {
+          throw new Error("Transaction ID not found");
+        }
+
+        // Hỏi phương thức thanh toán
+        const paymentMethodResult = await Swal.fire({
+          title: "Chọn phương thức thanh toán",
+          html: `
+            <div class="space-y-3">
+              <button id="momo-btn" class="w-full p-4 border-2 border-pink-500 rounded-lg hover:bg-pink-50 transition">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center text-white font-bold">M</div>
+                  <div class="text-left">
+                    <p class="font-semibold">MoMo</p>
+                    <p class="text-sm text-gray-600">Thanh toán qua ví MoMo</p>
+                  </div>
+                </div>
+              </button>
+              <button id="wallet-btn" class="w-full p-4 border-2 border-blue-500 rounded-lg hover:bg-blue-50 transition">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold">W</div>
+                  <div class="text-left">
+                    <p class="font-semibold">Ví EV Market</p>
+                    <p class="text-sm text-gray-600">Thanh toán từ số dư ví</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          `,
+          showCancelButton: true,
+          showConfirmButton: false,
+          cancelButtonText: "Hủy",
+          didOpen: () => {
+            const momoBtn = document.getElementById("momo-btn");
+            const walletBtn = document.getElementById("wallet-btn");
+
+            momoBtn?.addEventListener("click", () => {
+              Swal.clickConfirm();
+              (Swal as any).paymentMethod = "MOMO";
+            });
+
+            walletBtn?.addEventListener("click", () => {
+              Swal.clickConfirm();
+              (Swal as any).paymentMethod = "WALLET";
+            });
+          },
+        });
+
+        if (paymentMethodResult.dismiss) {
+          setLoading(false);
+          return;
+        }
+
+        const paymentMethod = (Swal as any).paymentMethod || "MOMO";
+        const redirectUrl = `${window.location.origin}/checkout/result?appointmentId=${appointmentId}`;
+
+        const paymentResponse = await payRemainder(
+          transactionId,
+          paymentMethod,
+          redirectUrl
+        );
+
+        // Redirect to payment URL
+        if (paymentResponse.data.paymentInfo?.payUrl) {
+          window.location.href = paymentResponse.data.paymentInfo.payUrl;
+        } else {
+          throw new Error("Payment URL not found");
+        }
+      } catch (err: any) {
+        await Swal.fire({
+          title: "Lỗi!",
+          text: err.message || "Không thể thực hiện thanh toán",
+          icon: "error",
+        });
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleRejectInspection = async () => {
+    const result = await Swal.fire({
+      title: "Từ chối giao dịch?",
+      html: `
+        <p class="mb-4">Xe không đúng như mô tả hoặc không đạt yêu cầu?</p>
+        <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-left">
+          <p class="font-medium text-red-800 mb-2">Lưu ý:</p>
+          <p class="text-sm text-red-700">
+            Lịch hẹn sẽ bị hủy và khoản cọc 10% sẽ được hoàn lại trong 24-48 giờ.
+          </p>
+        </div>
+      `,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Xác nhận từ chối",
+      cancelButtonText: "Quay lại",
+    });
+
+    if (result.isConfirmed) {
+      await handleCancel();
     }
   };
 
@@ -396,7 +527,7 @@ export default function AppointmentDetailPage() {
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="w-6 h-6 text-green-600 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-bold text-green-800 mb-1">
                         Lịch hẹn đã xác nhận
                       </h3>
@@ -421,6 +552,61 @@ export default function AppointmentDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* Buyer Confirmation After Meeting - Show on the meeting day */}
+              {appointment.confirmedDate &&
+                userRole === "buyer" &&
+                appointment.status === "CONFIRMED" &&
+                new Date(appointment.confirmedDate).toDateString() ===
+                  new Date().toDateString() &&
+                transaction?.status === "DEPOSIT_PAID" && (
+                  <div className="bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-6 mb-6">
+                    <div className="mb-4">
+                      <h3 className="font-bold text-gray-900 text-lg mb-2 flex items-center gap-2">
+                        <Clock className="w-6 h-6 text-yellow-600" />
+                        Xác nhận sau khi kiểm tra xe
+                      </h3>
+                      <p className="text-gray-700">
+                        Bạn đã kiểm tra xe và gặp người bán chưa? Hãy xác nhận
+                        để tiếp tục thanh toán 90% còn lại.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={handleAcceptInspection}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-2 bg-green-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                      >
+                        <ThumbsUp className="w-5 h-5" />
+                        <div className="text-left">
+                          <div className="text-sm">Xe đạt yêu cầu</div>
+                          <div className="text-xs opacity-90">
+                            Thanh toán 90%
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={handleRejectInspection}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-2 bg-red-600 text-white py-4 px-6 rounded-lg font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                      >
+                        <ThumbsDown className="w-5 h-5" />
+                        <div className="text-left">
+                          <div className="text-sm">Không đúng mô tả</div>
+                          <div className="text-xs opacity-90">
+                            Hủy và hoàn tiền
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-gray-600 mt-4 text-center">
+                      Vui lòng xác nhận trong vòng 24 giờ sau thời gian hẹn
+                    </p>
+                  </div>
+                )}
 
               {/* Actions */}
               {!appointment.confirmedDate && (
