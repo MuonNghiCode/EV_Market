@@ -53,6 +53,11 @@ function Header() {
     { name: t("navigation.home"), href: "/" },
     { name: t("navigation.browse"), href: "/browse" },
     { name: t("navigation.auctions"), href: "/auctions" },
+    {
+      name: t("navigation.appointments"),
+      href: "/appointments",
+      requireAuth: true,
+    },
     { name: t("navigation.sell"), href: "/sell" },
   ];
 
@@ -127,7 +132,11 @@ function Header() {
           <nav className="hidden md:flex items-center gap-8">
             {navigationItems.map((item, index) => {
               const isActive = isActivePath(item.href);
-              const requireAuth = item.href === "/sell";
+              const requireAuth = item.href === "/sell" || item.requireAuth;
+              // Don't show appointments link if not logged in
+              if (item.href === "/appointments" && !isLoggedIn) {
+                return null;
+              }
               return (
                 <button
                   key={index}

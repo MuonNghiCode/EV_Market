@@ -108,6 +108,28 @@ export {
   disputeTransaction
 } from './Transaction'
 
+// Export Appointment services
+export {
+  getMyAppointments,
+  proposeAppointmentDate,
+  confirmAppointment,
+  cancelAppointment,
+  cancelAppointmentWithRefund,
+  formatAppointmentDate,
+  canProposeDate,
+  canConfirmAppointment
+} from './Appointment'
+
+// Export Checkout services (updated with new deposit flow)
+export {
+  checkout,
+  payWithWallet,
+  initiateCheckout,
+  payRemainder,
+  requestRefund,
+  CheckoutError
+} from './Checkout'
+
 // Export Auction services
 export {
   getLiveAuctions,

@@ -1,16 +1,26 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle, XCircle, Loader2, ArrowLeft } from "lucide-react";
+import {
+  CheckCircle,
+  XCircle,
+  Loader2,
+  ArrowLeft,
+  Calendar,
+} from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import colors from "@/Utils/Color";
+import { getMyAppointments } from "@/services";
+import Swal from "sweetalert2";
 
 export default function CheckoutResultPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"success" | "failed" | null>(null);
+  const [appointmentId, setAppointmentId] = useState<string | null>(null);
+  const [checkingAppointment, setCheckingAppointment] = useState(false);
 
   useEffect(() => {
     // Parse MoMo callback params
@@ -32,12 +42,44 @@ export default function CheckoutResultPage() {
     // resultCode = 0 means success
     if (resultCode === "0") {
       setStatus("success");
+      // Check if appointment was auto-created by backend
+      checkForAppointment();
     } else {
       setStatus("failed");
     }
 
     setLoading(false);
   }, [searchParams]);
+
+  const checkForAppointment = async () => {
+    try {
+      setCheckingAppointment(true);
+      const orderId = searchParams.get("orderId");
+      if (!orderId) return;
+
+      // Backend tự tạo appointment khi thanh toán thành công
+      // Chờ một chút để backend tạo xong
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      const response = await getMyAppointments(1, 20);
+      const appointment = response.data.appointments.find(
+        (apt) => apt.transactionId === orderId
+      );
+
+      if (appointment) {
+        setAppointmentId(appointment.id);
+      }
+    } catch (err) {
+      console.error("Failed to check for appointment:", err);
+    } finally {
+      setCheckingAppointment(false);
+    }
+  };
+
+  const handleCreateAppointment = () => {
+    // Backend đã tự tạo appointment, người dùng chỉ cần vào trang appointments để propose/confirm dates
+    router.push("/appointments");
+  };
 
   if (loading) {
     return (
@@ -70,11 +112,34 @@ export default function CheckoutResultPage() {
 
               {/* Success Message */}
               <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-                Thanh toán thành công!
+                Thanh toán cọc thành công!
               </h1>
-              <p className="text-center text-gray-600 mb-8">
-                Đơn hàng của bạn đã được xác nhận và đang được xử lý.
+              <p className="text-center text-gray-600 mb-2">
+                Bạn đã thanh toán 10% tiền cọc thành công.
               </p>
+              <p className="text-center text-sm text-gray-500 mb-8">
+                Tiếp theo, vui lòng đặt lịch hẹn với người bán để kiểm tra xe.
+              </p>
+
+              {/* Appointment Notice */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-bold text-blue-900 mb-2">
+                      Bước tiếp theo: Đặt lịch hẹn
+                    </h3>
+                    <p className="text-sm text-blue-800 mb-3">
+                      Để hoàn tất giao dịch, bạn cần:
+                    </p>
+                    <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                      <li>Đặt lịch hẹn gặp người bán tại bãi xe</li>
+                      <li>Kiểm tra và xác nhận tình trạng xe</li>
+                      <li>Thanh toán 90% còn lại nếu chấp nhận</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
 
               {/* Transaction Details */}
               <div className="bg-gray-50 rounded-xl p-6 mb-8 space-y-3">
@@ -106,19 +171,32 @@ export default function CheckoutResultPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col gap-4">
+                {/* Primary action: Create appointment */}
                 <button
-                  onClick={() => router.push("/purchase-history")}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                  onClick={handleCreateAppointment}
+                  disabled={checkingAppointment}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  Xem lịch sử mua hàng
+                  <Calendar className="w-5 h-5" />
+                  Đi đến trang lịch hẹn
                 </button>
-                <button
-                  onClick={() => router.push("/browse")}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl font-semibold transition-all duration-300"
-                >
-                  Tiếp tục mua sắm
-                </button>
+
+                {/* Secondary actions */}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => router.push("/purchase-history")}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    Xem lịch sử mua hàng
+                  </button>
+                  <button
+                    onClick={() => router.push("/browse")}
+                    className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl font-semibold transition-all duration-300"
+                  >
+                    Tiếp tục mua sắm
+                  </button>
+                </div>
               </div>
             </>
           ) : (
