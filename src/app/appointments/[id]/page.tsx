@@ -354,7 +354,9 @@ export default function AppointmentDetailPage() {
                       <MapPin className="w-4 h-4" />
                       <span>Giao dịch:</span>
                       <span className="font-medium text-blue-600">
-                        {getTransactionStatusText(appointment.transaction?.status || "")}
+                        {getTransactionStatusText(
+                          appointment.transaction?.status || ""
+                        )}
                       </span>
                     </div>
                   </div>

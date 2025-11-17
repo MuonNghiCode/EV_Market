@@ -245,7 +245,9 @@ export default function AppointmentList({
                   <span>
                     Giao dịch:{" "}
                     <span className="font-medium text-blue-600">
-                      {getTransactionStatusText(appointment.transaction?.status || "")}
+                      {getTransactionStatusText(
+                        appointment.transaction?.status || ""
+                      )}
                     </span>
                   </span>
                 </div>
