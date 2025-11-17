@@ -34,10 +34,35 @@ export default function AppointmentsPage() {
   };
 
   const filteredAppointments = appointments.filter((apt) => {
-    if (activeTab === "PENDING") return apt.status === "PENDING";
-    if (activeTab === "CONFIRMED") return apt.status === "CONFIRMED";
-    if (activeTab === "COMPLETED") return apt.status === "COMPLETED";
-    if (activeTab === "CANCELLED") return apt.status === "CANCELLED";
+    const transactionStatus = apt.transaction?.status;
+
+    if (activeTab === "PENDING") {
+      return apt.status === "PENDING";
+    }
+
+    if (activeTab === "CONFIRMED") {
+      // Chỉ hiển thị appointment đã confirm nhưng chưa hoàn tất giao dịch
+      return (
+        apt.status === "CONFIRMED" &&
+        transactionStatus !== "COMPLETED" &&
+        transactionStatus !== "CANCELLED" &&
+        transactionStatus !== "REFUNDED"
+      );
+    }
+
+    if (activeTab === "COMPLETED") {
+      // Hiển thị appointment hoàn tất HOẶC transaction đã completed
+      return apt.status === "COMPLETED" || transactionStatus === "COMPLETED";
+    }
+
+    if (activeTab === "CANCELLED") {
+      return (
+        apt.status === "CANCELLED" ||
+        transactionStatus === "CANCELLED" ||
+        transactionStatus === "REFUNDED"
+      );
+    }
+
     return false;
   });
 
@@ -69,7 +94,36 @@ export default function AppointmentsPage() {
   ];
 
   const getCount = (status: TabType) => {
-    return appointments.filter((apt) => apt.status === status).length;
+    return appointments.filter((apt) => {
+      const transactionStatus = apt.transaction?.status;
+
+      if (status === "PENDING") {
+        return apt.status === "PENDING";
+      }
+
+      if (status === "CONFIRMED") {
+        return (
+          apt.status === "CONFIRMED" &&
+          transactionStatus !== "COMPLETED" &&
+          transactionStatus !== "CANCELLED" &&
+          transactionStatus !== "REFUNDED"
+        );
+      }
+
+      if (status === "COMPLETED") {
+        return apt.status === "COMPLETED" || transactionStatus === "COMPLETED";
+      }
+
+      if (status === "CANCELLED") {
+        return (
+          apt.status === "CANCELLED" ||
+          transactionStatus === "CANCELLED" ||
+          transactionStatus === "REFUNDED"
+        );
+      }
+
+      return false;
+    }).length;
   };
 
   return (

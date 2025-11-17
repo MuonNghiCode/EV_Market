@@ -30,8 +30,14 @@ export default function TransactionCard({
   const [disputeImages, setDisputeImages] = useState<File[]>([]);
   const [isDisputing, setIsDisputing] = useState(false);
 
-  const product = transaction.vehicle || transaction.battery;
+  // Handle both single battery and multiple batteries from cart
+  const product =
+    transaction.vehicle ||
+    transaction.battery ||
+    (transaction.batteries && transaction.batteries[0]);
   const productType = transaction.vehicle ? "vehicle" : "battery";
+  const isCartPurchase =
+    transaction.batteries && transaction.batteries.length > 1;
 
   const statusLabels: Record<string, string> = {
     COMPLETED: t("purchaseHistory.status.completed", "Completed"),
@@ -187,7 +193,9 @@ export default function TransactionCard({
                 whileHover={{ scale: 1.03, color: "#2563eb" }}
                 className="text-lg md:text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors mb-2 text-left line-clamp-2"
               >
-                {product.title}
+                {isCartPurchase
+                  ? `Giỏ hàng (${transaction.batteries.length} pin)`
+                  : product.title}
               </motion.button>
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <span
@@ -213,6 +221,46 @@ export default function TransactionCard({
               <p className="text-2xl md:text-3xl font-extrabold text-green-600">
                 {formatCurrency(transaction.finalPrice)}
               </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Cart Items - Show when multiple batteries */}
+        {isCartPurchase && transaction.batteries && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mt-4 border border-gray-200 rounded-xl p-4 bg-gray-50"
+          >
+            <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+              Các pin trong đơn hàng:
+            </h4>
+            <div className="space-y-2">
+              {transaction.batteries.map((battery, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 bg-white rounded-lg p-3"
+                >
+                  <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                    <Image
+                      src={battery.images[0] || "/placeholder.png"}
+                      alt={battery.title}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 text-sm truncate">
+                      {battery.title}
+                    </p>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700">
+                    {index + 1}/{transaction.batteries.length}
+                  </div>
+                </div>
+              ))}
             </div>
           </motion.div>
         )}

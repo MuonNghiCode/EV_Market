@@ -105,7 +105,8 @@ export {
   getPendingAuctionTransaction,
   shipTransaction,
   confirmReceipt,
-  disputeTransaction
+  disputeTransaction,
+  rejectTransaction
 } from './Transaction'
 
 // Export Appointment services
@@ -218,7 +219,8 @@ export type {
   PayAuctionResponse,
   ShipTransactionResponse,
   ConfirmReceiptResponse,
-  DisputeTransactionResponse
+  DisputeTransactionResponse,
+  RejectTransactionResponse
 } from './Transaction'
 
 export type {

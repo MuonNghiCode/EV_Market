@@ -9,6 +9,7 @@ import {
   canConfirmAppointment,
   cancelAppointmentWithRefund,
   payRemainder,
+  rejectTransaction,
 } from "@/services";
 import {
   Appointment,
@@ -270,7 +271,7 @@ export default function AppointmentDetailPage() {
         <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-left">
           <p class="font-medium text-red-800 mb-2">Lưu ý:</p>
           <p class="text-sm text-red-700">
-            Lịch hẹn sẽ bị hủy và khoản cọc 10% sẽ được hoàn lại trong 24-48 giờ.
+            Giao dịch sẽ bị từ chối và khoản cọc 10% sẽ được hoàn lại trong 24-48 giờ.
           </p>
         </div>
       `,
@@ -283,7 +284,35 @@ export default function AppointmentDetailPage() {
     });
 
     if (result.isConfirmed) {
-      await handleCancel();
+      try {
+        setLoading(true);
+        const transactionId = appointment?.transactionId;
+        if (!transactionId) {
+          throw new Error("Transaction ID not found");
+        }
+
+        // Call reject transaction API
+        await rejectTransaction(transactionId);
+
+        await Swal.fire({
+          title: "Thành công!",
+          html: `
+            <p class="text-green-600 mb-4">Giao dịch đã được từ chối</p>
+            <p class="text-sm text-gray-600 mt-2">Khoản cọc 10% sẽ được hoàn lại trong 24-48 giờ</p>
+          `,
+          icon: "success",
+        });
+
+        router.push("/appointments");
+      } catch (err: any) {
+        await Swal.fire({
+          title: "Lỗi!",
+          text: err.message || "Không thể từ chối giao dịch",
+          icon: "error",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
