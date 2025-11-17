@@ -1,13 +1,21 @@
 "use client";
 import React, { useState } from "react";
 import Image from "next/image";
-import { Heart, Share2, Flag, Battery as BatteryIcon, Zap } from "lucide-react";
+import {
+  Heart,
+  Share2,
+  Flag,
+  Battery as BatteryIcon,
+  Zap,
+  ShoppingCart,
+} from "lucide-react";
 import colors from "../../Utils/Color";
 import VerifiedBadge from "../common/VerifiedBadge";
 import { useI18nContext } from "../../providers/I18nProvider";
 import { useRouter } from "next/navigation";
-import { Battery } from "../../services";
+import { Battery, addToCart } from "../../services";
 import { motion } from "framer-motion";
+import Swal from "sweetalert2";
 
 interface PinDetailHeroProps {
   battery: Battery;
@@ -17,7 +25,36 @@ function PinDetailHero({ battery }: PinDetailHeroProps) {
   const { t } = useI18nContext();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  const handleAddToCart = async () => {
+    try {
+      setLoading(true);
+      await addToCart(battery.id);
+
+      await Swal.fire({
+        icon: "success",
+        title: "Đã thêm vào giỏ hàng",
+        text: `${battery.title} đã được thêm vào giỏ hàng`,
+        showCancelButton: true,
+        confirmButtonText: "Xem giỏ hàng",
+        cancelButtonText: "Tiếp tục mua sắm",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          router.push("/cart");
+        }
+      });
+    } catch (error: any) {
+      Swal.fire({
+        icon: "error",
+        title: "Lỗi",
+        text: error.message || "Không thể thêm vào giỏ hàng",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="">
@@ -144,17 +181,17 @@ function PinDetailHero({ battery }: PinDetailHeroProps) {
             {/* Action Buttons */}
             <div className="flex gap-4">
               <button
-                onClick={() =>
-                  router.push(
-                    `/checkout?listingId=${battery.id}&listingType=BATTERY`
-                  )
-                }
-                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:scale-105"
+                onClick={handleAddToCart}
+                disabled={loading || battery.status !== "AVAILABLE"}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {t("vehicleDetail.buyNow")}
+                {loading ? "Đang thêm..." : "Thêm vào giỏ hàng"}
               </button>
-              <button className="flex-1 border-2 border-blue-500 text-blue-700 hover:bg-white font-bold py-4 px-6 rounded-xl transition-colors duration-200">
-                {t("vehicleDetail.makeOffer")}
+              <button
+                onClick={() => router.push("/cart")}
+                className="flex-1 border-2 border-blue-500 text-blue-700 hover:bg-white font-bold py-4 px-6 rounded-xl transition-colors duration-200"
+              >
+                Xem giỏ hàng
               </button>
             </div>
 

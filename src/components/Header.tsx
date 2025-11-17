@@ -3,10 +3,10 @@ import React, { useState, useEffect } from "react";
 import colors from "../Utils/Color";
 import Image from "next/image";
 import Link from "next/link";
-import { User, List, LogOut, Wallet } from "lucide-react";
+import { User, List, LogOut, Wallet, ShoppingCart } from "lucide-react";
 import { useI18nContext } from "../providers/I18nProvider";
 import { usePathname, useRouter } from "next/navigation";
-import { isAuthenticated, logoutUser } from "../services";
+import { isAuthenticated, logoutUser, getCartItemCount } from "../services";
 
 function Header() {
   const [languageDropdownOpen, setLanguageDropdownOpen] = useState(false);
@@ -15,6 +15,7 @@ function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const { locale, changeLocale, t } = useI18nContext();
   const pathname = usePathname();
   const router = useRouter();
@@ -22,6 +23,23 @@ function Header() {
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
   }, [pathname]);
+
+  // Load cart count
+  useEffect(() => {
+    const loadCartCount = async () => {
+      if (isLoggedIn) {
+        try {
+          const count = await getCartItemCount();
+          setCartItemCount(count);
+        } catch (error) {
+          console.error("Failed to load cart count:", error);
+        }
+      } else {
+        setCartItemCount(0);
+      }
+    };
+    loadCartCount();
+  }, [isLoggedIn, pathname]);
 
   // Detect scroll for homepage
   useEffect(() => {
@@ -222,23 +240,22 @@ function Header() {
                 )}
               </div>
 
-              {/* Notifications - Only show when logged in */}
+              {/* Shopping Cart - Only show when logged in */}
               {isLoggedIn && (
                 <button
+                  onClick={() => router.push("/cart")}
                   className={`p-2 rounded-xl transition-all duration-300 relative ${
                     shouldBeTransparent
                       ? "hover:bg-white/10"
                       : "hover:bg-slate-100"
                   }`}
                 >
-                  <Image
-                    src="/Notifications.svg"
-                    alt="Notifications"
-                    width={32}
-                    height={32}
-                    className="w-6 h-6"
-                  />
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <ShoppingCart className="w-4 h-4 text-slate-700" />
+                  {cartItemCount > 0 && (
+                    <div className="absolute -top-0.5 -right-0.5 bg-blue-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {cartItemCount > 9 ? "9+" : cartItemCount}
+                    </div>
+                  )}
                 </button>
               )}
 

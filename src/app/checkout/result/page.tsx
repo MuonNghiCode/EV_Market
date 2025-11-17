@@ -22,6 +22,9 @@ export default function CheckoutResultPage() {
   const [appointmentId, setAppointmentId] = useState<string | null>(null);
   const [checkingAppointment, setCheckingAppointment] = useState(false);
   const [isRemainderPayment, setIsRemainderPayment] = useState(false);
+  const [transactionType, setTransactionType] = useState<
+    "vehicle_deposit" | "vehicle_remainder" | "battery_full" | null
+  >(null);
 
   useEffect(() => {
     // Parse MoMo callback params
@@ -31,12 +34,21 @@ export default function CheckoutResultPage() {
     const amount = searchParams.get("amount");
     const transId = searchParams.get("transId");
     const appointmentIdParam = searchParams.get("appointmentId");
+    const typeParam = searchParams.get("type"); // "battery" or "vehicle"
 
-    // Check if this is remainder payment (90%)
-    const isRemainder = !!appointmentIdParam;
-    setIsRemainderPayment(isRemainder);
-    if (appointmentIdParam) {
+    // Determine transaction type
+    if (typeParam === "battery") {
+      setTransactionType("battery_full");
+      setIsRemainderPayment(false);
+    } else if (appointmentIdParam) {
+      // Vehicle remainder payment (90%)
+      setTransactionType("vehicle_remainder");
+      setIsRemainderPayment(true);
       setAppointmentId(appointmentIdParam);
+    } else {
+      // Vehicle deposit payment (10%)
+      setTransactionType("vehicle_deposit");
+      setIsRemainderPayment(false);
     }
 
     // Log for debugging
@@ -47,14 +59,19 @@ export default function CheckoutResultPage() {
       amount,
       transId,
       appointmentId: appointmentIdParam,
-      isRemainderPayment: isRemainder,
+      transactionType:
+        typeParam === "battery"
+          ? "battery_full"
+          : appointmentIdParam
+          ? "vehicle_remainder"
+          : "vehicle_deposit",
     });
 
     // resultCode = 0 means success
     if (resultCode === "0") {
       setStatus("success");
-      // Check if appointment was auto-created by backend (only for deposit payment)
-      if (!isRemainder) {
+      // Check if appointment was auto-created by backend (only for vehicle deposit payment)
+      if (typeParam !== "battery" && !appointmentIdParam) {
         checkForAppointment();
       }
     } else {
@@ -125,23 +142,29 @@ export default function CheckoutResultPage() {
 
               {/* Success Message */}
               <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-                {isRemainderPayment
-                  ? "Thanh toán thành công!"
-                  : "Thanh toán cọc thành công!"}
+                {transactionType === "battery_full"
+                  ? "Thanh toán pin thành công!"
+                  : transactionType === "vehicle_remainder"
+                  ? "Thanh toán xe thành công!"
+                  : "Thanh toán cọc xe thành công!"}
               </h1>
               <p className="text-center text-gray-600 mb-2">
-                {isRemainderPayment
-                  ? "Bạn đã thanh toán đầy đủ cho giao dịch này."
-                  : "Bạn đã thanh toán 10% tiền cọc thành công."}
+                {transactionType === "battery_full"
+                  ? "Bạn đã thanh toán đầy đủ cho pin. Người bán sẽ gửi hàng đến hệ thống."
+                  : transactionType === "vehicle_remainder"
+                  ? "Bạn đã thanh toán đầy đủ cho xe."
+                  : "Bạn đã thanh toán 10% tiền cọc xe thành công."}
               </p>
               <p className="text-center text-sm text-gray-500 mb-8">
-                {isRemainderPayment
+                {transactionType === "battery_full"
+                  ? "Hệ thống sẽ ship pin đến bạn. Vui lòng xác nhận khi nhận được hàng."
+                  : transactionType === "vehicle_remainder"
                   ? "Giao dịch của bạn đã hoàn tất. Cảm ơn bạn đã mua hàng!"
                   : "Tiếp theo, vui lòng đặt lịch hẹn với người bán để kiểm tra xe."}
               </p>
 
-              {/* Appointment Notice - Only show for deposit payment */}
-              {!isRemainderPayment && (
+              {/* Appointment Notice - Only show for vehicle deposit payment */}
+              {transactionType === "vehicle_deposit" && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
                   <div className="flex items-start gap-3">
                     <Calendar className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
@@ -162,8 +185,8 @@ export default function CheckoutResultPage() {
                 </div>
               )}
 
-              {/* Completion Notice - Only show for remainder payment */}
-              {isRemainderPayment && (
+              {/* Completion Notice - Only show for vehicle remainder payment */}
+              {transactionType === "vehicle_remainder" && (
                 <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="w-6 h-6 text-green-600 mt-1 flex-shrink-0" />
@@ -176,6 +199,29 @@ export default function CheckoutResultPage() {
                         sử mua hàng để xem chi tiết giao dịch và thông tin liên
                         hệ người bán.
                       </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Battery Shipment Notice - Only show for battery payment */}
+              {transactionType === "battery_full" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" />
+                    <div>
+                      <h3 className="font-bold text-blue-900 mb-2">
+                        Quy trình giao hàng
+                      </h3>
+                      <p className="text-sm text-blue-800 mb-3">
+                        Pin của bạn sẽ được giao theo quy trình sau:
+                      </p>
+                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                        <li>Người bán gửi pin đến hệ thống</li>
+                        <li>Hệ thống kiểm tra và ship đến bạn</li>
+                        <li>Bạn xác nhận đã nhận hàng</li>
+                        <li>Hệ thống chuyển tiền cho người bán</li>
+                      </ol>
                     </div>
                   </div>
                 </div>
@@ -212,8 +258,8 @@ export default function CheckoutResultPage() {
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-4">
-                {/* Primary action: Different for deposit vs remainder */}
-                {!isRemainderPayment ? (
+                {/* Primary action: Different for each transaction type */}
+                {transactionType === "vehicle_deposit" ? (
                   <button
                     onClick={handleCreateAppointment}
                     disabled={checkingAppointment}
@@ -233,7 +279,7 @@ export default function CheckoutResultPage() {
 
                 {/* Secondary actions */}
                 <div className="flex flex-col sm:flex-row gap-4">
-                  {!isRemainderPayment && (
+                  {transactionType === "vehicle_deposit" && (
                     <button
                       onClick={() => router.push("/purchase-history")}
                       className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl"
@@ -242,10 +288,18 @@ export default function CheckoutResultPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => router.push("/browse")}
+                    onClick={() =>
+                      router.push(
+                        transactionType === "battery_full"
+                          ? "/batteries"
+                          : "/browse"
+                      )
+                    }
                     className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl font-semibold transition-all duration-300"
                   >
-                    Tiếp tục mua sắm
+                    {transactionType === "battery_full"
+                      ? "Mua thêm pin"
+                      : "Tiếp tục mua sắm"}
                   </button>
                 </div>
               </div>

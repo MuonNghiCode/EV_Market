@@ -130,6 +130,15 @@ export {
   CheckoutError
 } from './Checkout'
 
+// Export Cart services
+export {
+  getCart,
+  addToCart,
+  removeFromCart,
+  checkoutCart,
+  getCartItemCount
+} from './Cart'
+
 // Export Auction services
 export {
   getLiveAuctions,
