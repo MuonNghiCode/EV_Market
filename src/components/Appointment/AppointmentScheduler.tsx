@@ -7,12 +7,14 @@ import Swal from "sweetalert2";
 
 interface AppointmentSchedulerProps {
   appointmentId: string;
+  createdAt?: string; // Ngày tạo appointment (ngày ký hợp đồng)
   onProposed?: () => void;
   onClose?: () => void;
 }
 
 export default function AppointmentScheduler({
   appointmentId,
+  createdAt,
   onProposed,
   onClose,
 }: AppointmentSchedulerProps) {
@@ -74,6 +76,21 @@ export default function AppointmentScheduler({
     return now.toISOString().slice(0, 16);
   };
 
+  // Get maximum datetime (created date + 7 days)
+  const getMaxDateTime = () => {
+    if (!createdAt) {
+      // Nếu không có createdAt, giới hạn 7 ngày từ bây giờ
+      const max = new Date();
+      max.setDate(max.getDate() + 7);
+      return max.toISOString().slice(0, 16);
+    }
+
+    const contractDate = new Date(createdAt);
+    const maxDate = new Date(contractDate);
+    maxDate.setDate(maxDate.getDate() + 7);
+    return maxDate.toISOString().slice(0, 16);
+  };
+
   return (
     <div className="bg-white rounded-lg p-6 shadow-lg">
       <div className="flex justify-between items-center mb-6">
@@ -89,8 +106,9 @@ export default function AppointmentScheduler({
       </div>
 
       <p className="text-gray-600 mb-6">
-        Vui lòng chọn 3 khung giờ phù hợp để gặp gỡ và kiểm tra xe. Bên kia sẽ
-        chọn 1 trong 3 khung giờ bạn đề xuất.
+        Vui lòng chọn 3 khuển giờ phù hợp để gặp gỡ và kiểm tra xe trong vòng{" "}
+        <strong>7 ngày kể từ ngày ký hợp đồng</strong>. Bên kia sẽ chọn 1 trong
+        3 khuển giờ bạn đề xuất.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,6 +123,7 @@ export default function AppointmentScheduler({
               value={proposedDates[index]}
               onChange={(e) => handleDateChange(index, e.target.value)}
               min={getMinDateTime()}
+              max={getMaxDateTime()}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
@@ -135,8 +154,9 @@ export default function AppointmentScheduler({
 
       <div className="mt-6 p-4 bg-blue-50 rounded-lg">
         <p className="text-sm text-blue-800">
-          <strong>Lưu ý:</strong> Sau khi bên kia xác nhận 1 trong 3 khung giờ,
-          lịch hẹn sẽ được cố định. Hãy đảm bảo bạn có thể có mặt vào các khung
+          <strong>Lưu ý:</strong> Bạn chỉ có thể chọn lịch hẹn trong vòng 7 ngày
+          kể từ ngày ký hợp đồng. Sau khi bên kia xác nhận 1 trong 3 khuển giờ,
+          lịch hẹn sẽ được cố định. Hãy đảm bảo bạn có thể có mặt vào các khuển
           giờ đã chọn.
         </p>
       </div>

@@ -263,6 +263,20 @@ export default function AppointmentDetailPage() {
     );
   };
 
+  const getTransactionStatusText = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      PENDING: "Chờ thanh toán",
+      DEPOSIT_PAID: "Đã cọc 10%",
+      APPOINTMENT_SCHEDULED: "Đã đặt lịch hẹn",
+      PAID: "Đã thanh toán đầy đủ",
+      COMPLETED: "Hoàn tất",
+      CANCELLED: "Đã hủy",
+      REFUNDED: "Đã hoàn tiền",
+      SHIPPED: "Đang giao hàng",
+    };
+    return statusMap[status] || status;
+  };
+
   return (
     <>
       <Header />
@@ -340,7 +354,7 @@ export default function AppointmentDetailPage() {
                       <MapPin className="w-4 h-4" />
                       <span>Giao dịch:</span>
                       <span className="font-medium text-blue-600">
-                        {appointment.transaction?.status}
+                        {getTransactionStatusText(appointment.transaction?.status || "")}
                       </span>
                     </div>
                   </div>
@@ -368,15 +382,7 @@ export default function AppointmentDetailPage() {
                         Trạng thái thanh toán
                       </p>
                       <p className="font-semibold text-green-600 text-sm">
-                        {transaction.status === "DEPOSIT_PAID" &&
-                          "Đã thanh toán cọc 10%"}
-                        {transaction.status === "PENDING" && "Chờ thanh toán"}
-                        {transaction.status === "PAID" &&
-                          "Đã thanh toán đầy đủ"}
-                        {transaction.status === "COMPLETED" &&
-                          "Giao dịch hoàn tất"}
-                        {transaction.status === "CANCELLED" && "Đã hủy"}
-                        {transaction.status === "REFUNDED" && "Đã hoàn tiền"}
+                        {getTransactionStatusText(transaction.status)}
                       </p>
                     </div>
                   </div>
@@ -429,6 +435,7 @@ export default function AppointmentDetailPage() {
                   {showScheduler && (
                     <AppointmentScheduler
                       appointmentId={appointment.id}
+                      createdAt={appointment.createdAt}
                       onProposed={handleProposed}
                       onClose={() => setShowScheduler(false)}
                     />

@@ -87,6 +87,20 @@ export default function AppointmentList({
     return isBuyer ? appointment.seller : appointment.buyer;
   };
 
+  const getTransactionStatusText = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      PENDING: "Chờ thanh toán",
+      DEPOSIT_PAID: "Đã cọc 10%",
+      APPOINTMENT_SCHEDULED: "Đã đặt lịch hẹn",
+      PAID: "Đã thanh toán đầy đủ",
+      COMPLETED: "Hoàn tất",
+      CANCELLED: "Đã hủy",
+      REFUNDED: "Đã hoàn tiền",
+      SHIPPED: "Đang giao hàng",
+    };
+    return statusMap[status] || status;
+  };
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-4">
@@ -231,7 +245,7 @@ export default function AppointmentList({
                   <span>
                     Giao dịch:{" "}
                     <span className="font-medium text-blue-600">
-                      {appointment.transaction?.status}
+                      {getTransactionStatusText(appointment.transaction?.status || "")}
                     </span>
                   </span>
                 </div>
