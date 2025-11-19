@@ -68,9 +68,20 @@ function Register() {
       });
       if (response.success) {
         const accessToken = response.data?.accessToken;
+        const user = response.data?.user;
+        
         if (accessToken) {
-          // Use JWT's own expiration time for new registrations
+          // Store access token using JWT's own expiration time
           storeAuthToken(accessToken);
+          
+          // Store user info if available from response
+          if (user) {
+            // Import storeUserInfo from services
+            const { storeUserInfo } = await import("../../services");
+            storeUserInfo(user);
+            console.log('✅ Stored user info after registration:', user);
+          }
+          
           console.log('🔐 Registration - using JWT expiration');
           toast.success(
             t(
