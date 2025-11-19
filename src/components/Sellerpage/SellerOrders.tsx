@@ -305,8 +305,13 @@ export default function SellerOrders() {
       <div className="space-y-6">
         <AnimatePresence>
           {transactions.map((transaction, index) => {
-            const product = transaction.vehicle || transaction.battery;
+            const product =
+              transaction.vehicle ||
+              transaction.battery ||
+              (transaction.batteries && transaction.batteries[0]);
             const productType = transaction.vehicle ? "vehicle" : "battery";
+            const isCartItem =
+              transaction.batteries && transaction.batteries.length > 0;
 
             if (!product) return null;
 
@@ -348,8 +353,10 @@ export default function SellerOrders() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0 pr-4">
-                          <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
-                            {product.title}
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
+                            {isCartItem && transaction.batteries.length > 1
+                              ? `Đơn gộp (${transaction.batteries.length} pin)`
+                              : product.title}
                           </h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             {/* Status Badge */}
@@ -388,7 +395,9 @@ export default function SellerOrders() {
                               {t("seller.orders.buyer", "Buyer")}
                             </p>
                             <p className="text-sm font-bold text-gray-900 truncate">
-                              {transaction.buyerId || "N/A"}
+                              {transaction.buyer?.name ||
+                                transaction.buyerId ||
+                                "N/A"}
                             </p>
                           </div>
                         </div>
@@ -439,6 +448,46 @@ export default function SellerOrders() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Cart Items - Show all batteries when multiple */}
+                      {isCartItem && transaction.batteries.length > 1 && (
+                        <div className="mt-4 border border-gray-200 rounded-xl p-4 bg-gray-50">
+                          <h4 className="font-semibold text-gray-900 mb-3 text-sm">
+                            {t(
+                              "seller.orders.cartItems",
+                              "Các pin trong đơn hàng:"
+                            )}
+                          </h4>
+                          <div className="space-y-2">
+                            {transaction.batteries.map((battery, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-3 bg-white rounded-lg p-3"
+                              >
+                                <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
+                                  <Image
+                                    src={
+                                      battery.images[0] || "/placeholder.png"
+                                    }
+                                    alt={battery.title}
+                                    fill
+                                    className="object-cover"
+                                    unoptimized
+                                  />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-gray-900 text-sm truncate">
+                                    {battery.title}
+                                  </p>
+                                </div>
+                                <div className="text-sm font-semibold text-gray-700">
+                                  {idx + 1}/{transaction.batteries.length}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Action Buttons */}
                       <div className="flex items-center justify-end gap-3">
