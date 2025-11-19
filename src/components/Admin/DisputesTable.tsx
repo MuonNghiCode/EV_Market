@@ -239,7 +239,9 @@ export default function DisputesTable() {
                         <div className="text-sm">
                           <div className="font-medium text-gray-900 line-clamp-1">
                             {isCartPurchase
-                              ? `Đơn gộp (${dispute.batteries?.length || 0} pin)`
+                              ? `Đơn gộp (${
+                                  dispute.batteries?.length || 0
+                                } pin)`
                               : product?.title || "N/A"}
                           </div>
                           <div className="text-gray-500 text-xs">
@@ -441,12 +443,10 @@ export default function DisputesTable() {
                           {selectedDispute.batteries &&
                           selectedDispute.batteries.length > 1
                             ? `Giỏ hàng (${selectedDispute.batteries.length} pin)`
-                            : (
-                                selectedDispute.vehicle?.title ||
-                                selectedDispute.battery?.title ||
-                                selectedDispute.batteries?.[0]?.title ||
-                                "N/A"
-                              )}
+                            : selectedDispute.vehicle?.title ||
+                              selectedDispute.battery?.title ||
+                              selectedDispute.batteries?.[0]?.title ||
+                              "N/A"}
                         </p>
                       </div>
                       <div>
@@ -536,11 +536,9 @@ export default function DisputesTable() {
                       {t("admin.disputes.seller", "Seller")}
                     </h4>
                     <div className="flex items-center gap-3 mb-2">
-                      {(
-                        selectedDispute.vehicle?.seller?.avatar ||
-                        selectedDispute.battery?.seller?.avatar ||
-                        selectedDispute.batteries?.[0]?.seller?.avatar
-                      ) ? (
+                      {selectedDispute.vehicle?.seller?.avatar ||
+                      selectedDispute.battery?.seller?.avatar ||
+                      selectedDispute.batteries?.[0]?.seller?.avatar ? (
                         <div className="relative w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
                           <Image
                             src={
