@@ -239,7 +239,7 @@ export default function DisputesTable() {
                         <div className="text-sm">
                           <div className="font-medium text-gray-900 line-clamp-1">
                             {isCartPurchase
-                              ? `Giỏ hàng (${dispute.batteries.length} pin)`
+                              ? `Đơn gộp (${dispute.batteries?.length || 0} pin)`
                               : product?.title || "N/A"}
                           </div>
                           <div className="text-gray-500 text-xs">
@@ -415,18 +415,16 @@ export default function DisputesTable() {
                       <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
                         <Image
                           src={
-                            (
-                              selectedDispute.vehicle ||
-                              selectedDispute.battery ||
-                              selectedDispute.batteries[0]
-                            ).images[0]
+                            selectedDispute.vehicle?.images?.[0] ||
+                            selectedDispute.battery?.images?.[0] ||
+                            selectedDispute.batteries?.[0]?.images?.[0] ||
+                            "/placeholder.png"
                           }
                           alt={
-                            (
-                              selectedDispute.vehicle ||
-                              selectedDispute.battery ||
-                              selectedDispute.batteries[0]
-                            ).title
+                            selectedDispute.vehicle?.title ||
+                            selectedDispute.battery?.title ||
+                            selectedDispute.batteries?.[0]?.title ||
+                            "Product"
                           }
                           fill
                           className="object-cover"
@@ -444,10 +442,11 @@ export default function DisputesTable() {
                           selectedDispute.batteries.length > 1
                             ? `Giỏ hàng (${selectedDispute.batteries.length} pin)`
                             : (
-                                selectedDispute.vehicle ||
-                                selectedDispute.battery ||
-                                selectedDispute.batteries[0]
-                              )?.title || "N/A"}
+                                selectedDispute.vehicle?.title ||
+                                selectedDispute.battery?.title ||
+                                selectedDispute.batteries?.[0]?.title ||
+                                "N/A"
+                              )}
                         </p>
                       </div>
                       <div>
@@ -490,7 +489,7 @@ export default function DisputesTable() {
                               </p>
                             </div>
                             <div className="text-sm font-semibold text-gray-700">
-                              {idx + 1}/{selectedDispute.batteries.length}
+                              {idx + 1}/{selectedDispute.batteries?.length || 0}
                             </div>
                           </div>
                         ))}
@@ -538,25 +537,23 @@ export default function DisputesTable() {
                     </h4>
                     <div className="flex items-center gap-3 mb-2">
                       {(
-                        selectedDispute.vehicle ||
-                        selectedDispute.battery ||
-                        selectedDispute.batteries[0]
-                      )?.seller.avatar ? (
+                        selectedDispute.vehicle?.seller?.avatar ||
+                        selectedDispute.battery?.seller?.avatar ||
+                        selectedDispute.batteries?.[0]?.seller?.avatar
+                      ) ? (
                         <div className="relative w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
                           <Image
                             src={
-                              (
-                                selectedDispute.vehicle ||
-                                selectedDispute.battery ||
-                                selectedDispute.batteries[0]
-                              ).seller.avatar
+                              selectedDispute.vehicle?.seller?.avatar ||
+                              selectedDispute.battery?.seller?.avatar ||
+                              selectedDispute.batteries?.[0]?.seller?.avatar ||
+                              "/placeholder.png"
                             }
                             alt={
-                              (
-                                selectedDispute.vehicle ||
-                                selectedDispute.battery ||
-                                selectedDispute.batteries[0]
-                              ).seller.name
+                              selectedDispute.vehicle?.seller?.name ||
+                              selectedDispute.battery?.seller?.name ||
+                              selectedDispute.batteries?.[0]?.seller?.name ||
+                              "Seller"
                             }
                             fill
                             className="object-cover"
@@ -567,11 +564,10 @@ export default function DisputesTable() {
                         <div className="w-12 h-12 flex-shrink-0 rounded-full bg-green-200 flex items-center justify-center">
                           <span className="text-green-700 font-bold text-lg">
                             {(
-                              (
-                                selectedDispute.vehicle ||
-                                selectedDispute.battery ||
-                                selectedDispute.batteries[0]
-                              )?.seller.name || "N"
+                              selectedDispute.vehicle?.seller?.name ||
+                              selectedDispute.battery?.seller?.name ||
+                              selectedDispute.batteries?.[0]?.seller?.name ||
+                              "N"
                             )
                               .charAt(0)
                               .toUpperCase()}
@@ -580,18 +576,16 @@ export default function DisputesTable() {
                       )}
                       <div>
                         <p className="font-medium">
-                          {(
-                            selectedDispute.vehicle ||
-                            selectedDispute.battery ||
-                            selectedDispute.batteries[0]
-                          )?.seller.name || "N/A"}
+                          {selectedDispute.vehicle?.seller?.name ||
+                            selectedDispute.battery?.seller?.name ||
+                            selectedDispute.batteries?.[0]?.seller?.name ||
+                            "N/A"}
                         </p>
                         <p className="text-sm text-gray-600">
-                          {(
-                            selectedDispute.vehicle ||
-                            selectedDispute.battery ||
-                            selectedDispute.batteries[0]
-                          )?.seller.email || "N/A"}
+                          {selectedDispute.vehicle?.seller?.email ||
+                            selectedDispute.battery?.seller?.email ||
+                            selectedDispute.batteries?.[0]?.seller?.email ||
+                            "N/A"}
                         </p>
                       </div>
                     </div>
