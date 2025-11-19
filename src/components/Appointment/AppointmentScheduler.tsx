@@ -61,10 +61,10 @@ export default function AppointmentScheduler({
       return;
     }
 
-    // Convert to ISO format with timezone (set time to 10:00 AM by default)
+    // Convert to ISO format with timezone (set time to 00:00 by default)
     const isoDate = proposedDates.map((date) => {
       const d = new Date(date);
-      d.setHours(10, 0, 0, 0); // Set default time to 10:00 AM
+      d.setHours(0, 0, 0, 0); // Set default time to 00:00 (midnight)
       return d.toISOString();
     });
 
