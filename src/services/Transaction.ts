@@ -30,6 +30,11 @@ export interface TransactionBattery {
 export interface Transaction {
   id: string
   buyerId: string
+  buyer?: {
+    id: string
+    name: string
+    email: string
+  }
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED'
   vehicleId: string | null
   batteryId: string | null

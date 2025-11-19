@@ -41,6 +41,8 @@ export interface RegisterResponse {
       id: string
       email: string
       fullName?: string
+      name?: string
+      role?: string
     }
     accessToken?: string
     refreshToken?: string

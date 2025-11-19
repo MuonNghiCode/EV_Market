@@ -23,25 +23,41 @@ interface DisputedTransaction {
     id: string;
     name: string;
     email: string;
+    avatar: string | null;
   };
   vehicle?: {
     id: string;
     title: string;
+    images: string[];
     seller: {
       id: string;
       name: string;
       email: string;
+      avatar: string | null;
     };
   };
   battery?: {
     id: string;
     title: string;
+    images: string[];
     seller: {
       id: string;
       name: string;
       email: string;
+      avatar: string | null;
     };
   };
+  batteries?: {
+    id: string;
+    title: string;
+    images: string[];
+    seller: {
+      id: string;
+      name: string;
+      email: string;
+      avatar: string | null;
+    };
+  }[];
 }
 
 export default function DisputesTable() {
@@ -197,16 +213,36 @@ export default function DisputesTable() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {disputes.map((dispute) => {
-                const product = dispute.vehicle || dispute.battery;
+                const product =
+                  dispute.vehicle ||
+                  dispute.battery ||
+                  (dispute.batteries && dispute.batteries[0]);
                 const seller = product?.seller;
+                const isCartPurchase =
+                  dispute.batteries && dispute.batteries.length > 1;
 
                 return (
                   <tr key={dispute.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
+                        {product?.images && product.images[0] && (
+                          <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                            <Image
+                              src={product.images[0]}
+                              alt={product.title}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        )}
                         <div className="text-sm">
                           <div className="font-medium text-gray-900 line-clamp-1">
-                            {product?.title || "N/A"}
+                            {isCartPurchase
+                              ? `Đơn gộp (${
+                                  dispute.batteries?.length || 0
+                                } pin)`
+                              : product?.title || "N/A"}
                           </div>
                           <div className="text-gray-500 text-xs">
                             ID: {dispute.id.slice(0, 8)}...
@@ -215,22 +251,62 @@ export default function DisputesTable() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {dispute.buyer.name}
-                        </div>
-                        <div className="text-gray-500">
-                          {dispute.buyer.email}
+                      <div className="flex items-center gap-3">
+                        {dispute.buyer.avatar ? (
+                          <div className="relative w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
+                            <Image
+                              src={dispute.buyer.avatar}
+                              alt={dispute.buyer.name}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center">
+                            <span className="text-blue-600 font-semibold text-sm">
+                              {dispute.buyer.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">
+                            {dispute.buyer.name}
+                          </div>
+                          <div className="text-gray-500">
+                            {dispute.buyer.email}
+                          </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {seller?.name || "N/A"}
-                        </div>
-                        <div className="text-gray-500">
-                          {seller?.email || "N/A"}
+                      <div className="flex items-center gap-3">
+                        {seller?.avatar ? (
+                          <div className="relative w-10 h-10 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
+                            <Image
+                              src={seller.avatar}
+                              alt={seller.name}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 flex-shrink-0 rounded-full bg-green-100 flex items-center justify-center">
+                            <span className="text-green-600 font-semibold text-sm">
+                              {seller?.name
+                                ? seller.name.charAt(0).toUpperCase()
+                                : "N"}
+                            </span>
+                          </div>
+                        )}
+                        <div className="text-sm">
+                          <div className="font-medium text-gray-900">
+                            {seller?.name || "N/A"}
+                          </div>
+                          <div className="text-gray-500">
+                            {seller?.email || "N/A"}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -331,26 +407,95 @@ export default function DisputesTable() {
                   <h4 className="font-semibold text-gray-900 mb-3">
                     {t("admin.disputes.productInfo", "Product Information")}
                   </h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">
-                        {t("admin.disputes.productName", "Product Name")}
-                      </p>
-                      <p className="font-medium">
-                        {(selectedDispute.vehicle || selectedDispute.battery)
-                          ?.title || "N/A"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">
-                        {t("admin.disputes.amount", "Amount")}
-                      </p>
-                      <p className="font-medium text-green-600">
-                        {formatCurrency(selectedDispute.finalPrice)}
-                      </p>
+                  <div className="flex gap-4">
+                    {(
+                      selectedDispute.vehicle ||
+                      selectedDispute.battery ||
+                      (selectedDispute.batteries &&
+                        selectedDispute.batteries[0])
+                    )?.images?.[0] && (
+                      <div className="relative w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                        <Image
+                          src={
+                            selectedDispute.vehicle?.images?.[0] ||
+                            selectedDispute.battery?.images?.[0] ||
+                            selectedDispute.batteries?.[0]?.images?.[0] ||
+                            "/placeholder.png"
+                          }
+                          alt={
+                            selectedDispute.vehicle?.title ||
+                            selectedDispute.battery?.title ||
+                            selectedDispute.batteries?.[0]?.title ||
+                            "Product"
+                          }
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          {t("admin.disputes.productName", "Product Name")}
+                        </p>
+                        <p className="font-medium">
+                          {selectedDispute.batteries &&
+                          selectedDispute.batteries.length > 1
+                            ? `Giỏ hàng (${selectedDispute.batteries.length} pin)`
+                            : selectedDispute.vehicle?.title ||
+                              selectedDispute.battery?.title ||
+                              selectedDispute.batteries?.[0]?.title ||
+                              "N/A"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          {t("admin.disputes.amount", "Amount")}
+                        </p>
+                        <p className="font-medium text-green-600">
+                          {formatCurrency(selectedDispute.finalPrice)}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Cart Items if multiple batteries */}
+                {selectedDispute.batteries &&
+                  selectedDispute.batteries.length > 1 && (
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3">
+                        Các pin trong đơn hàng:
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedDispute.batteries.map((battery, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-3 bg-white rounded-lg p-3"
+                          >
+                            <div className="relative w-12 h-12 flex-shrink-0 rounded overflow-hidden bg-gray-100">
+                              <Image
+                                src={battery.images[0] || "/placeholder.png"}
+                                alt={battery.title}
+                                fill
+                                className="object-cover"
+                                unoptimized
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 text-sm truncate">
+                                {battery.title}
+                              </p>
+                            </div>
+                            <div className="text-sm font-semibold text-gray-700">
+                              {idx + 1}/{selectedDispute.batteries?.length || 0}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                 {/* Parties */}
                 <div className="grid grid-cols-2 gap-4">
@@ -358,23 +503,90 @@ export default function DisputesTable() {
                     <h4 className="font-semibold text-gray-900 mb-2">
                       {t("admin.disputes.buyer", "Buyer")}
                     </h4>
-                    <p className="font-medium">{selectedDispute.buyer.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {selectedDispute.buyer.email}
-                    </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      {selectedDispute.buyer.avatar ? (
+                        <div className="relative w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
+                          <Image
+                            src={selectedDispute.buyer.avatar}
+                            alt={selectedDispute.buyer.name}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 flex-shrink-0 rounded-full bg-blue-200 flex items-center justify-center">
+                          <span className="text-blue-700 font-bold text-lg">
+                            {selectedDispute.buyer.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium">
+                          {selectedDispute.buyer.name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {selectedDispute.buyer.email}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   <div className="bg-green-50 rounded-xl p-4">
                     <h4 className="font-semibold text-gray-900 mb-2">
                       {t("admin.disputes.seller", "Seller")}
                     </h4>
-                    <p className="font-medium">
-                      {(selectedDispute.vehicle || selectedDispute.battery)
-                        ?.seller.name || "N/A"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {(selectedDispute.vehicle || selectedDispute.battery)
-                        ?.seller.email || "N/A"}
-                    </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      {selectedDispute.vehicle?.seller?.avatar ||
+                      selectedDispute.battery?.seller?.avatar ||
+                      selectedDispute.batteries?.[0]?.seller?.avatar ? (
+                        <div className="relative w-12 h-12 flex-shrink-0 rounded-full overflow-hidden bg-gray-100">
+                          <Image
+                            src={
+                              selectedDispute.vehicle?.seller?.avatar ||
+                              selectedDispute.battery?.seller?.avatar ||
+                              selectedDispute.batteries?.[0]?.seller?.avatar ||
+                              "/placeholder.png"
+                            }
+                            alt={
+                              selectedDispute.vehicle?.seller?.name ||
+                              selectedDispute.battery?.seller?.name ||
+                              selectedDispute.batteries?.[0]?.seller?.name ||
+                              "Seller"
+                            }
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 flex-shrink-0 rounded-full bg-green-200 flex items-center justify-center">
+                          <span className="text-green-700 font-bold text-lg">
+                            {(
+                              selectedDispute.vehicle?.seller?.name ||
+                              selectedDispute.battery?.seller?.name ||
+                              selectedDispute.batteries?.[0]?.seller?.name ||
+                              "N"
+                            )
+                              .charAt(0)
+                              .toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium">
+                          {selectedDispute.vehicle?.seller?.name ||
+                            selectedDispute.battery?.seller?.name ||
+                            selectedDispute.batteries?.[0]?.seller?.name ||
+                            "N/A"}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {selectedDispute.vehicle?.seller?.email ||
+                            selectedDispute.battery?.seller?.email ||
+                            selectedDispute.batteries?.[0]?.seller?.email ||
+                            "N/A"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -411,6 +623,7 @@ export default function DisputesTable() {
                                 width={200}
                                 height={200}
                                 className="w-full h-40 object-cover rounded-lg hover:opacity-90 transition-opacity"
+                                unoptimized
                               />
                               <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg flex items-center justify-center">
                                 <svg
