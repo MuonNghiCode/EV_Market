@@ -379,7 +379,7 @@ export default function Checkout() {
           toast.error("Không tìm thấy liên kết thanh toán MoMo.");
         }
       } else {
-        // WALLET flow: two-step payment required
+        // WALLET flow: checkout already completes payment
         const transactionId =
           (res as any)?.data?.id || (res as any)?.data?.transactionId;
 
@@ -392,34 +392,24 @@ export default function Checkout() {
           return;
         }
 
+        // Update wallet balance
         try {
-          // Call payWithWallet to complete payment
-          console.log("Calling payWithWallet with ID:", transactionId);
-          const payRes = await payWithWallet(transactionId);
+          const bal = await getWalletBalance();
+          setWalletBalance(bal.data?.availableBalance ?? null);
+        } catch {}
 
-          // Update wallet balance
-          try {
-            const bal = await getWalletBalance();
-            setWalletBalance(bal.data?.availableBalance ?? null);
-          } catch {}
+        // Show success message
+        toast.success("Thanh toán cọc bằng ví thành công!");
 
-          // Show success message
-          toast.success(
-            payRes?.message || "Thanh toán cọc bằng ví thành công!"
-          );
-
-          // Redirect to checkout result page with success status
-          setTimeout(
-            () =>
-              router.push(
-                "/checkout/result?resultCode=0&message=Thanh toán cọc thành công&orderId=" +
-                  transactionId
-              ),
-            1500
-          );
-        } catch (e: any) {
-          toast.error(e?.message || "Thanh toán ví thất bại");
-        }
+        // Redirect to checkout result page with success status
+        setTimeout(
+          () =>
+            router.push(
+              "/checkout/result?resultCode=0&message=Thanh toán cọc thành công&orderId=" +
+                transactionId
+            ),
+          1500
+        );
       }
     } catch (error: any) {
       toast.error(error?.message || "Thanh toán thất bại");

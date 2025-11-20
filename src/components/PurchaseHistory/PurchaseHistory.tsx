@@ -15,8 +15,12 @@ export default function PurchaseHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
-  const [activeTab, setActiveTab] = useState<"ongoing" | "completed" | "cancelled">("ongoing");
-  const [productFilter, setProductFilter] = useState<"all" | "vehicle" | "battery">("all");
+  const [activeTab, setActiveTab] = useState<
+    "ongoing" | "completed" | "cancelled"
+  >("ongoing");
+  const [productFilter, setProductFilter] = useState<
+    "all" | "vehicle" | "battery"
+  >("all");
 
   const fetchTransactions = async (page: number) => {
     try {
@@ -51,13 +55,17 @@ export default function PurchaseHistory() {
     let statusMatch = false;
     if (activeTab === "ongoing") {
       // Đang diễn ra: PAID, DEPOSIT_PAID, SHIPPED
-      statusMatch = ["PAID", "DEPOSIT_PAID", "SHIPPED"].includes(transaction.status);
+      statusMatch = ["PAID", "DEPOSIT_PAID", "SHIPPED"].includes(
+        transaction.status
+      );
     } else if (activeTab === "completed") {
       // Đã hoàn thành: COMPLETED
       statusMatch = transaction.status === "COMPLETED";
     } else if (activeTab === "cancelled") {
       // Đã hủy: CANCELLED, REFUNDED, DISPUTED
-      statusMatch = ["CANCELLED", "REFUNDED", "DISPUTED"].includes(transaction.status);
+      statusMatch = ["CANCELLED", "REFUNDED", "DISPUTED"].includes(
+        transaction.status
+      );
     }
 
     // Product type filter
@@ -191,14 +199,32 @@ export default function PurchaseHistory() {
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
                   </svg>
                   <span>Đang diễn ra</span>
-                  <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
-                    activeTab === "ongoing" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
-                  }`}>
-                    {transactions.filter(t => ["PAID", "DEPOSIT_PAID", "SHIPPED"].includes(t.status)).length}
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === "ongoing"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {
+                      transactions.filter((t) =>
+                        ["PAID", "DEPOSIT_PAID", "SHIPPED"].includes(t.status)
+                      ).length
+                    }
                   </span>
                 </div>
                 {activeTab === "ongoing" && (
@@ -214,14 +240,31 @@ export default function PurchaseHistory() {
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <span>Đã hoàn thành</span>
-                  <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
-                    activeTab === "completed" ? "bg-green-600 text-white" : "bg-gray-200 text-gray-700"
-                  }`}>
-                    {transactions.filter(t => t.status === "COMPLETED").length}
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === "completed"
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {
+                      transactions.filter((t) => t.status === "COMPLETED")
+                        .length
+                    }
                   </span>
                 </div>
                 {activeTab === "completed" && (
@@ -237,14 +280,32 @@ export default function PurchaseHistory() {
                 }`}
               >
                 <div className="flex items-center justify-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   <span>Đã hủy</span>
-                  <span className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
-                    activeTab === "cancelled" ? "bg-red-600 text-white" : "bg-gray-200 text-gray-700"
-                  }`}>
-                    {transactions.filter(t => ["CANCELLED", "REFUNDED", "DISPUTED"].includes(t.status)).length}
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === "cancelled"
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {
+                      transactions.filter((t) =>
+                        ["CANCELLED", "REFUNDED", "DISPUTED"].includes(t.status)
+                      ).length
+                    }
                   </span>
                 </div>
                 {activeTab === "cancelled" && (
@@ -256,7 +317,9 @@ export default function PurchaseHistory() {
 
           {/* Product Filter */}
           <div className="p-4 bg-gray-50 flex items-center gap-4 flex-wrap">
-            <span className="text-sm font-semibold text-gray-700">Loại sản phẩm:</span>
+            <span className="text-sm font-semibold text-gray-700">
+              Loại sản phẩm:
+            </span>
             <div className="flex gap-2">
               <button
                 onClick={() => setProductFilter("all")}
@@ -266,8 +329,18 @@ export default function PurchaseHistory() {
                     : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
                 Tất cả
               </button>
@@ -279,8 +352,18 @@ export default function PurchaseHistory() {
                     : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                  />
                 </svg>
                 Xe
               </button>
@@ -292,8 +375,18 @@ export default function PurchaseHistory() {
                     : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                 }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                  />
                 </svg>
                 Pin
               </button>
@@ -309,9 +402,7 @@ export default function PurchaseHistory() {
           className="bg-white rounded-3xl shadow-xl p-8 mb-10 flex items-center justify-between flex-wrap gap-6"
         >
           <div>
-            <p className="text-sm text-gray-500 mb-1">
-              Kết quả hiển thị
-            </p>
+            <p className="text-sm text-gray-500 mb-1">Kết quả hiển thị</p>
             <p className="text-3xl md:text-4xl font-extrabold text-blue-700">
               {filteredTransactions.length}
             </p>
