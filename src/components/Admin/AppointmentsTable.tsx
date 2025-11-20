@@ -175,6 +175,39 @@ const AppointmentDetailModal = ({
             </div>
           )}
 
+          {/* Vehicle Images */}
+          {appointment.transaction?.vehicle?.images &&
+            appointment.transaction.vehicle.images.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Car className="w-5 h-5" />
+                  Hình ảnh xe
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {appointment.transaction.vehicle.images.map(
+                    (image: string, idx: number) => (
+                      <div
+                        key={idx}
+                        className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden group cursor-pointer"
+                      >
+                        <img
+                          src={image}
+                          alt={`Vehicle ${idx + 1}`}
+                          className="w-full h-full object-cover transition group-hover:scale-110"
+                          onClick={() => window.open(image, "_blank")}
+                        />
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition flex items-center justify-center">
+                          <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
+                            Xem lớn
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
+
           {/* Buyer & Seller Info */}
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             {/* Buyer */}
@@ -290,6 +323,19 @@ const AppointmentDetailModal = ({
               </h4>
               <p className="text-2xl font-bold text-green-700">
                 {formatDateTime(appointment.confirmedDate)}
+              </p>
+            </div>
+          )}
+
+          {/* Location */}
+          {appointment.location && (
+            <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <h4 className="text-lg font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                <MapPin className="w-5 h-5" />
+                Địa điểm gặp mặt
+              </h4>
+              <p className="text-lg font-medium text-blue-900">
+                {appointment.location}
               </p>
             </div>
           )}

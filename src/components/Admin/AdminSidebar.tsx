@@ -76,12 +76,12 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: SidebarProps) {
       href: "/admin/fees",
       key: "fees",
     },
-    // {
-    //   icon: FileCheck,
-    //   label: "Quản lý hợp đồng",
-    //   href: "/admin/contracts",
-    //   key: "contracts",
-    // },
+    {
+      icon: FileCheck,
+      label: "Quản lý hợp đồng",
+      href: "/admin/contracts",
+      key: "contracts",
+    },
   ];
 
   return (
