@@ -605,6 +605,26 @@ export default function AppointmentDetailPage() {
                 </div>
               )}
 
+              {/* Meeting Location */}
+              {appointment.location && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-6 h-6 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="font-bold text-blue-800 mb-1">
+                        Địa điểm gặp mặt
+                      </h3>
+                      <p className="text-blue-700 text-base">
+                        {appointment.location}
+                      </p>
+                      <p className="text-sm text-blue-600 mt-2">
+                        Hãy đến đúng địa chỉ này để kiểm tra và giao dịch
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Buyer Confirmation After Meeting - Show from the meeting time onwards */}
               {appointment.confirmedDate &&
                 userRole === "buyer" &&

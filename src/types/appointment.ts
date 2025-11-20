@@ -33,6 +33,7 @@ export interface Appointment {
   buyerProposedDates: string[];
   sellerProposedDates: string[];
   confirmedDate: string | null;
+  location: string | null;
   status: AppointmentStatus;
   createdAt: string;
   updatedAt: string;

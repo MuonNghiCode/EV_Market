@@ -170,6 +170,7 @@ export interface Appointment {
   sellerProposedDates: string[];
   confirmedDate: string | null;
   status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  location: string | null;
   createdAt: string;
   updatedAt: string;
   vehicleId: string | null;
@@ -190,6 +191,7 @@ export interface Appointment {
     vehicle?: {
       id: string;
       title: string;
+      images: string[];
     };
   };
 }
