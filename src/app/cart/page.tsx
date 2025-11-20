@@ -9,7 +9,7 @@ import { getWalletBalance } from "@/services/Wallet";
 import type { CartItem } from "@/types/cart";
 import Image from "next/image";
 import Swal from "sweetalert2";
-import { Wallet, CreditCard } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 export default function CartPage() {
   const router = useRouter();
@@ -149,7 +149,9 @@ export default function CartPage() {
       } else {
         // WALLET payment - checkout already completes payment
         const transactionId =
-          (response.data as any).id || response.data.transaction?.id;
+          (response.data as any).transactionId ||
+          (response.data as any).id ||
+          response.data.transaction?.id;
 
         console.log("Response data:", response.data);
         console.log("Extracted transactionId:", transactionId);

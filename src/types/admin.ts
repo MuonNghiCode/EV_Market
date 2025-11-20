@@ -160,3 +160,36 @@ export interface Listing {
   };
   type: "VEHICLE" | "BATTERY";
 }
+
+export interface Appointment {
+  id: string;
+  transactionId: string;
+  buyerId: string;
+  sellerId: string;
+  buyerProposedDates: string[];
+  sellerProposedDates: string[];
+  confirmedDate: string | null;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+  createdAt: string;
+  updatedAt: string;
+  vehicleId: string | null;
+  batteryId: string | null;
+  buyer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  seller: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  transaction: {
+    id: string;
+    status: string;
+    vehicle?: {
+      id: string;
+      title: string;
+    };
+  };
+}

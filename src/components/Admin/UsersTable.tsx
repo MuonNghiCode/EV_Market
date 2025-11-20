@@ -278,8 +278,8 @@ function UsersTable({ users, onUserUpdate, loading = false }: UsersTableProps) {
 
       {/* Lock Modal */}
       {showLockModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl border border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Khóa tài khoản người dùng
             </h3>
@@ -319,8 +319,8 @@ function UsersTable({ users, onUserUpdate, loading = false }: UsersTableProps) {
 
       {/* Unlock Modal */}
       {showUnlockModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 backdrop-blur-sm bg-white/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-2xl border border-gray-200">
             <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full mb-4">
               <Unlock className="w-6 h-6 text-green-600" />
             </div>

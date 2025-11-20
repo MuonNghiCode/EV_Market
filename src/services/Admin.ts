@@ -562,3 +562,39 @@ export const resolveDispute = async (
     };
   }
 };
+
+// Get all appointments
+export const getAppointments = async (page = 1, limit = 10) => {
+  try {
+    const token = await ensureValidToken();
+    const response = await fetch(
+      `${API_BASE_URL}/admin/appointments?page=${page}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Failed to fetch appointments");
+    }
+
+    return {
+      success: true,
+      data: data.data,
+      message: data.message,
+    };
+  } catch (error) {
+    console.error("Error fetching appointments:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "Unknown error",
+      data: null,
+    };
+  }
+};
