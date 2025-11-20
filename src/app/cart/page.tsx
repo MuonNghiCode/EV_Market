@@ -5,9 +5,11 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ShoppingCart, Trash2, ArrowRight, Package } from "lucide-react";
 import { getCart, removeFromCart, checkoutCart } from "@/services";
+import { getWalletBalance } from "@/services/Wallet";
 import type { CartItem } from "@/types/cart";
 import Image from "next/image";
 import Swal from "sweetalert2";
+import { Wallet } from "lucide-react";
 
 export default function CartPage() {
   const router = useRouter();
@@ -15,9 +17,13 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [removing, setRemoving] = useState<string | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"MOMO" | "WALLET">("MOMO");
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
 
   useEffect(() => {
     loadCart();
+    loadWalletBalance();
   }, []);
 
   const loadCart = async () => {
@@ -34,6 +40,18 @@ export default function CartPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWalletBalance = async () => {
+    try {
+      setLoadingBalance(true);
+      const response = await getWalletBalance();
+      setWalletBalance(response.data?.availableBalance ?? null);
+    } catch (error) {
+      console.error("Failed to load wallet balance:", error);
+    } finally {
+      setLoadingBalance(false);
     }
   };
 
@@ -82,63 +100,77 @@ export default function CartPage() {
       return;
     }
 
-    // Select payment method
+    // Check wallet balance if using WALLET
+    if (
+      paymentMethod === "WALLET" &&
+      walletBalance !== null &&
+      walletBalance < totalPrice
+    ) {
+      Swal.fire({
+        icon: "error",
+        title: "Số dư không đủ",
+        text: "Vui lòng nạp thêm tiền vào ví hoặc chọn phương thức khác",
+      });
+      return;
+    }
+
     const result = await Swal.fire({
-      title: "Chọn phương thức thanh toán",
-      html: `
-        <div class="space-y-3">
-          <button id="momo-btn" class="w-full p-4 border-2 border-pink-500 rounded-lg hover:bg-pink-50 transition">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center text-white font-bold">M</div>
-              <div class="text-left">
-                <p class="font-semibold">MoMo</p>
-                <p class="text-sm text-gray-600">Thanh toán qua ví MoMo</p>
-              </div>
-            </div>
-          </button>
-          <button id="wallet-btn" class="w-full p-4 border-2 border-blue-500 rounded-lg hover:bg-blue-50 transition">
-            <div class="flex items-center gap-3">
-              <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold">W</div>
-              <div class="text-left">
-                <p class="font-semibold">Ví EV Market</p>
-                <p class="text-sm text-gray-600">Thanh toán từ số dư ví</p>
-              </div>
-            </div>
-          </button>
-        </div>
-      `,
+      title: "Xác nhận thanh toán",
+      text: `Thanh toán ${totalPrice.toLocaleString()} VNĐ bằng ${
+        paymentMethod === "MOMO" ? "MoMo" : "Ví EV Market"
+      }?`,
+      icon: "question",
       showCancelButton: true,
-      showConfirmButton: false,
+      confirmButtonText: "Xác nhận",
       cancelButtonText: "Hủy",
-      didOpen: () => {
-        const momoBtn = document.getElementById("momo-btn");
-        const walletBtn = document.getElementById("wallet-btn");
-
-        momoBtn?.addEventListener("click", () => {
-          Swal.clickConfirm();
-          (Swal as any).paymentMethod = "MOMO";
-        });
-
-        walletBtn?.addEventListener("click", () => {
-          Swal.clickConfirm();
-          (Swal as any).paymentMethod = "WALLET";
-        });
-      },
     });
 
     if (result.dismiss) return;
 
-    const paymentMethod = (Swal as any).paymentMethod || "MOMO";
-
     try {
       setCheckingOut(true);
-      const redirectUrl = `${window.location.origin}/checkout/result?type=battery`;
+      // Only MOMO needs redirectUrl
+      const redirectUrl =
+        paymentMethod === "MOMO"
+          ? `${window.location.origin}/checkout/result?type=battery`
+          : undefined;
       const response = await checkoutCart(paymentMethod, redirectUrl);
 
-      if (response.data.paymentUrl) {
-        window.location.href = response.data.paymentUrl;
+      console.log("Cart checkout response:", response);
+      console.log("Payment method:", paymentMethod);
+
+      if (paymentMethod === "MOMO") {
+        // MOMO payment - redirect to payment URL
+        if (response.data.paymentUrl) {
+          window.location.href = response.data.paymentUrl;
+        } else {
+          throw new Error("Không tìm thấy URL thanh toán MoMo");
+        }
       } else {
-        throw new Error("Không tìm thấy URL thanh toán");
+        // WALLET payment - checkout already completes payment
+        const transactionId =
+          (response.data as any).transactionId ||
+          (response.data as any).id ||
+          response.data.transaction?.id;
+
+        console.log("Response data:", response.data);
+        console.log("Extracted transactionId:", transactionId);
+
+        if (!transactionId) {
+          throw new Error("Không tìm thấy transaction ID");
+        }
+
+        // Success - redirect to result page
+        Swal.fire({
+          icon: "success",
+          title: "Thanh toán thành công",
+          text: "Đơn hàng của bạn đã được thanh toán bằng ví",
+          timer: 2000,
+        });
+
+        setTimeout(() => {
+          window.location.href = `${window.location.origin}/checkout/result?type=battery&resultCode=0&message=Thanh toán thành công&orderId=${transactionId}`;
+        }, 1500);
       }
     } catch (error: any) {
       Swal.fire({
@@ -278,6 +310,103 @@ export default function CartPage() {
                       <span className="text-2xl font-bold text-blue-600">
                         {totalPrice.toLocaleString()} VNĐ
                       </span>
+                    </div>
+                  </div>
+
+                  {/* Payment Method Selection */}
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">
+                      Phương thức thanh toán
+                    </h3>
+                    <div className="space-y-3">
+                      {/* MoMo */}
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("MOMO")}
+                        className={`w-full p-4 border-2 rounded-lg transition-all ${
+                          paymentMethod === "MOMO"
+                            ? "border-pink-500 bg-pink-50"
+                            : "border-gray-200 hover:border-pink-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 bg-pink-500 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                            M
+                          </div>
+                          <div className="flex-1 text-left">
+                            <p className="font-semibold text-gray-900">MoMo</p>
+                            <p className="text-xs text-gray-600">
+                              Thanh toán qua ví MoMo
+                            </p>
+                          </div>
+                          {paymentMethod === "MOMO" && (
+                            <div className="w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      </button>
+
+                      {/* Wallet */}
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMethod("WALLET")}
+                        className={`w-full p-4 border-2 rounded-lg transition-all ${
+                          paymentMethod === "WALLET"
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-blue-300"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Wallet className="w-12 h-12 text-blue-600" />
+                          <div className="flex-1 text-left">
+                            <p className="font-semibold text-gray-900">
+                              Ví EV Market
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {loadingBalance ? (
+                                "Đang tải..."
+                              ) : walletBalance !== null ? (
+                                <>
+                                  Số dư: {walletBalance.toLocaleString()} VNĐ
+                                  {walletBalance < totalPrice && (
+                                    <span className="text-red-600 font-semibold ml-1">
+                                      (Không đủ)
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                "Thanh toán từ số dư ví"
+                              )}
+                            </p>
+                          </div>
+                          {paymentMethod === "WALLET" && (
+                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      </button>
                     </div>
                   </div>
 

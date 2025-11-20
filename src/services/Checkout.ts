@@ -58,6 +58,12 @@ export const payWithWallet = async (transactionId: string): Promise<WalletPaymen
       json = { message: text }
     }
 
+    console.log('payWithWallet response:', {
+      status: response.status,
+      ok: response.ok,
+      body: json
+    });
+
     if (!response.ok) {
       throw new CheckoutError(json?.message || 'Wallet payment failed', response.status)
     }

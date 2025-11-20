@@ -53,6 +53,7 @@ interface InputProps {
   placeholder: string;
   type?: string;
   required?: boolean;
+  disabled?: boolean;
   form: FormData;
   errors: ValidationError[];
   handleChange: (field: keyof FormData, value: string) => void;
@@ -82,6 +83,7 @@ const Input = ({
   placeholder,
   type = "text",
   required = false,
+  disabled = false,
   form,
   errors,
   handleChange,
@@ -112,13 +114,16 @@ const Input = ({
           onChange={onChange}
           onBlur={() => handleBlur(field)}
           placeholder={placeholder}
+          disabled={disabled}
           className={`w-full px-5 py-3 rounded-xl border-2 text-base font-medium transition-all focus:ring-2 focus:ring-blue-500 focus:outline-none bg-slate-50 placeholder-gray-400
             ${
               hasFieldError(errors, field)
                 ? "border-red-400"
                 : "border-blue-100"
             }
-            hover:border-blue-400`}
+            hover:border-blue-400 ${
+              disabled ? "opacity-60 cursor-not-allowed bg-gray-100" : ""
+            }`}
         />
         {translatedError && (
           <p className="mt-2 text-sm text-red-600">{translatedError}</p>
@@ -214,7 +219,7 @@ function AddListing({ onSuccess }: AddListingProps = {}) {
     year: "",
     price: "", // Will be managed by priceInput hook
     mileage: "", // Will be managed by mileageInput hook
-    location: "",
+    location: "Hồ Chí Minh",
     bodyType: "",
     exteriorColor: "",
     interiorColor: "",
@@ -624,6 +629,7 @@ function AddListing({ onSuccess }: AddListingProps = {}) {
                 errors={errors}
                 handleChange={handleChange}
                 handleBlur={handleBlur}
+                disabled={true}
               />
               <Select
                 field="bodyType"

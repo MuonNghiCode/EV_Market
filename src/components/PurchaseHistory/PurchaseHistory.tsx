@@ -15,13 +15,23 @@ export default function PurchaseHistory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [activeTab, setActiveTab] = useState<
+    "ongoing" | "completed" | "cancelled"
+  >("ongoing");
+  const [productFilter, setProductFilter] = useState<
+    "all" | "vehicle" | "battery"
+  >("all");
 
   const fetchTransactions = async (page: number) => {
     try {
       setIsLoading(true);
       setError(null);
       const response = await getMyTransactions(page, 10);
-      setTransactions(response.data.transactions);
+      // Filter out PENDING transactions
+      const filteredTransactions = response.data.transactions.filter(
+        (transaction: Transaction) => transaction.status !== "PENDING"
+      );
+      setTransactions(filteredTransactions);
       setTotalPages(response.data.totalPages);
       setTotalResults(response.data.totalResults);
       setCurrentPage(response.data.page);
@@ -38,6 +48,36 @@ export default function PurchaseHistory() {
   useEffect(() => {
     fetchTransactions(currentPage);
   }, []);
+
+  // Filter transactions based on active tab and product filter
+  const filteredTransactions = transactions.filter((transaction) => {
+    // Status filter
+    let statusMatch = false;
+    if (activeTab === "ongoing") {
+      // Đang diễn ra: PAID, DEPOSIT_PAID, SHIPPED
+      statusMatch = ["PAID", "DEPOSIT_PAID", "SHIPPED"].includes(
+        transaction.status
+      );
+    } else if (activeTab === "completed") {
+      // Đã hoàn thành: COMPLETED
+      statusMatch = transaction.status === "COMPLETED";
+    } else if (activeTab === "cancelled") {
+      // Đã hủy: CANCELLED, REFUNDED, DISPUTED
+      statusMatch = ["CANCELLED", "REFUNDED", "DISPUTED"].includes(
+        transaction.status
+      );
+    }
+
+    // Product type filter
+    let productMatch = true;
+    if (productFilter === "vehicle") {
+      productMatch = !!transaction.vehicle;
+    } else if (productFilter === "battery") {
+      productMatch = !!transaction.battery || !!transaction.batteries;
+    }
+
+    return statusMatch && productMatch;
+  });
 
   const handlePageChange = (page: number) => {
     fetchTransactions(page);
@@ -140,6 +180,220 @@ export default function PurchaseHistory() {
           </p>
         </motion.div>
 
+        {/* Tabs and Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="bg-white rounded-2xl shadow-lg overflow-hidden mb-8"
+        >
+          {/* Status Tabs */}
+          <div className="border-b border-gray-200">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab("ongoing")}
+                className={`flex-1 px-6 py-4 text-sm font-semibold transition-all relative ${
+                  activeTab === "ongoing"
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                  <span>Đang diễn ra</span>
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === "ongoing"
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {
+                      transactions.filter((t) =>
+                        ["PAID", "DEPOSIT_PAID", "SHIPPED"].includes(t.status)
+                      ).length
+                    }
+                  </span>
+                </div>
+                {activeTab === "ongoing" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("completed")}
+                className={`flex-1 px-6 py-4 text-sm font-semibold transition-all relative ${
+                  activeTab === "completed"
+                    ? "text-green-600 bg-green-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span>Đã hoàn thành</span>
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === "completed"
+                        ? "bg-green-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {
+                      transactions.filter((t) => t.status === "COMPLETED")
+                        .length
+                    }
+                  </span>
+                </div>
+                {activeTab === "completed" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-600" />
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("cancelled")}
+                className={`flex-1 px-6 py-4 text-sm font-semibold transition-all relative ${
+                  activeTab === "cancelled"
+                    ? "text-red-600 bg-red-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span>Đã hủy</span>
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs ${
+                      activeTab === "cancelled"
+                        ? "bg-red-600 text-white"
+                        : "bg-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {
+                      transactions.filter((t) =>
+                        ["CANCELLED", "REFUNDED", "DISPUTED"].includes(t.status)
+                      ).length
+                    }
+                  </span>
+                </div>
+                {activeTab === "cancelled" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Product Filter */}
+          <div className="p-4 bg-gray-50 flex items-center gap-4 flex-wrap">
+            <span className="text-sm font-semibold text-gray-700">
+              Loại sản phẩm:
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setProductFilter("all")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  productFilter === "all"
+                    ? "bg-indigo-600 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+                Tất cả
+              </button>
+              <button
+                onClick={() => setProductFilter("vehicle")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  productFilter === "vehicle"
+                    ? "bg-indigo-600 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                  />
+                </svg>
+                Xe
+              </button>
+              <button
+                onClick={() => setProductFilter("battery")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  productFilter === "battery"
+                    ? "bg-indigo-600 text-white shadow-md"
+                    : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
+                }`}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
+                  />
+                </svg>
+                Pin
+              </button>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Stats Card */}
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -148,11 +402,9 @@ export default function PurchaseHistory() {
           className="bg-white rounded-3xl shadow-xl p-8 mb-10 flex items-center justify-between flex-wrap gap-6"
         >
           <div>
-            <p className="text-sm text-gray-500 mb-1">
-              {t("purchaseHistory.totalPurchases", "Total Purchases")}
-            </p>
+            <p className="text-sm text-gray-500 mb-1">Kết quả hiển thị</p>
             <p className="text-3xl md:text-4xl font-extrabold text-blue-700">
-              {totalResults}
+              {filteredTransactions.length}
             </p>
           </div>
           <div className="flex items-center gap-3 bg-blue-50 px-5 py-3 rounded-xl">
@@ -170,15 +422,14 @@ export default function PurchaseHistory() {
               />
             </svg>
             <span className="text-base font-semibold text-blue-700">
-              {transactions.filter((t) => t.status === "COMPLETED").length}{" "}
-              {t("purchaseHistory.completed", "Completed")}
+              Tổng: {totalResults} đơn hàng
             </span>
           </div>
         </motion.div>
 
         {/* Transactions List */}
         <AnimatePresence mode="wait">
-          {transactions.length === 0 ? (
+          {filteredTransactions.length === 0 ? (
             <motion.div
               key="empty"
               initial={{ opacity: 0, y: 30 }}
@@ -197,7 +448,7 @@ export default function PurchaseHistory() {
               transition={{ duration: 0.5 }}
             >
               <div className="space-y-6">
-                {transactions.map((transaction) => (
+                {filteredTransactions.map((transaction) => (
                   <TransactionCard
                     key={transaction.id}
                     transaction={transaction}

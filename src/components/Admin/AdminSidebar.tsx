@@ -14,6 +14,7 @@ import {
   History,
   FileCheck,
   AlertTriangle,
+  Calendar,
 } from "lucide-react";
 import { useI18nContext } from "@/providers/I18nProvider";
 
@@ -56,6 +57,12 @@ export default function AdminSidebar({ isOpen, toggleSidebar }: SidebarProps) {
       label: "Lịch sử đấu giá",
       href: "/admin/auction-history",
       key: "auction-history",
+    },
+    {
+      icon: Calendar,
+      label: "Quản lý lịch hẹn",
+      href: "/admin/appointments",
+      key: "appointments",
     },
     {
       icon: AlertTriangle,

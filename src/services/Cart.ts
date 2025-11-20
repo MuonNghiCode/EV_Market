@@ -121,7 +121,7 @@ export async function removeFromCart(itemId: string): Promise<{ message: string 
  */
 export async function checkoutCart(
   paymentMethod: 'MOMO' | 'WALLET',
-  redirectUrl: string
+  redirectUrl?: string
 ): Promise<CartCheckoutResponse> {
   try {
     await ensureValidToken();
@@ -131,10 +131,11 @@ export async function checkoutCart(
       throw new Error('Authentication required');
     }
 
-    const payload: CartCheckoutPayload = {
-      paymentMethod,
-      redirectUrl,
-    };
+    const payload: any = { paymentMethod };
+    // Only include redirectUrl for MOMO
+    if (redirectUrl) {
+      payload.redirectUrl = redirectUrl;
+    }
 
     const response = await fetch(`${API_BASE_URL}/checkout`, {
       method: 'POST',
