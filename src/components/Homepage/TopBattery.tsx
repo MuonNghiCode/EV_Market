@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useI18nContext } from "../../providers/I18nProvider";
@@ -18,9 +18,9 @@ function TopBattery() {
   } = useDataContext();
   const [displayBatteries, setDisplayBatteries] = useState<Battery[]>([]);
 
-  const handleBatteryClick = (batteryId: string) => {
+  const handleBatteryClick = useCallback((batteryId: string) => {
     router.push(`/pin/${batteryId}`);
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchBatteries();
@@ -267,4 +267,4 @@ function TopBattery() {
   );
 }
 
-export default TopBattery;
+export default memo(TopBattery);
