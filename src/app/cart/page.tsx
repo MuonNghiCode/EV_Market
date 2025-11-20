@@ -101,7 +101,11 @@ export default function CartPage() {
     }
 
     // Check wallet balance if using WALLET
-    if (paymentMethod === "WALLET" && walletBalance !== null && walletBalance < totalPrice) {
+    if (
+      paymentMethod === "WALLET" &&
+      walletBalance !== null &&
+      walletBalance < totalPrice
+    ) {
       Swal.fire({
         icon: "error",
         title: "Số dư không đủ",
@@ -112,12 +116,13 @@ export default function CartPage() {
 
     const result = await Swal.fire({
       title: "Xác nhận thanh toán",
-      text: `Thanh toán ${totalPrice.toLocaleString()} VNĐ bằng ${paymentMethod === "MOMO" ? "MoMo" : "Ví EV Market"}?`,
+      text: `Thanh toán ${totalPrice.toLocaleString()} VNĐ bằng ${
+        paymentMethod === "MOMO" ? "MoMo" : "Ví EV Market"
+      }?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Xác nhận",
       cancelButtonText: "Hủy",
-
     });
 
     if (result.dismiss) return;
@@ -125,9 +130,10 @@ export default function CartPage() {
     try {
       setCheckingOut(true);
       // Only MOMO needs redirectUrl
-      const redirectUrl = paymentMethod === "MOMO" 
-        ? `${window.location.origin}/checkout/result?type=battery`
-        : undefined;
+      const redirectUrl =
+        paymentMethod === "MOMO"
+          ? `${window.location.origin}/checkout/result?type=battery`
+          : undefined;
       const response = await checkoutCart(paymentMethod, redirectUrl);
 
       console.log("Cart checkout response:", response);
@@ -142,11 +148,12 @@ export default function CartPage() {
         }
       } else {
         // WALLET payment - checkout already completes payment
-        const transactionId = (response.data as any).id || response.data.transaction?.id;
-        
+        const transactionId =
+          (response.data as any).id || response.data.transaction?.id;
+
         console.log("Response data:", response.data);
         console.log("Extracted transactionId:", transactionId);
-        
+
         if (!transactionId) {
           throw new Error("Không tìm thấy transaction ID");
         }
@@ -332,8 +339,16 @@ export default function CartPage() {
                           </div>
                           {paymentMethod === "MOMO" && (
                             <div className="w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             </div>
                           )}
@@ -375,8 +390,16 @@ export default function CartPage() {
                           </div>
                           {paymentMethod === "WALLET" && (
                             <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <svg
+                                className="w-3 h-3 text-white"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
                               </svg>
                             </div>
                           )}

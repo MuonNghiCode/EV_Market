@@ -349,12 +349,12 @@ export default function Checkout() {
         listingType: listingType as "VEHICLE" | "BATTERY",
         paymentMethod: selectedPaymentMethod === "qr" ? "MOMO" : "WALLET",
       };
-      
+
       // Only add redirectUrl for MOMO
       if (selectedPaymentMethod === "qr") {
         checkoutPayload.redirectUrl = `${window.location.origin}/checkout/result`;
       }
-      
+
       const res = await checkout(checkoutPayload);
 
       console.log("Checkout response:", res);
@@ -380,12 +380,13 @@ export default function Checkout() {
         }
       } else {
         // WALLET flow: two-step payment required
-        const transactionId = (res as any)?.data?.id || (res as any)?.data?.transactionId;
-        
+        const transactionId =
+          (res as any)?.data?.id || (res as any)?.data?.transactionId;
+
         console.log("WALLET checkout response:", res);
         console.log("Extracted transactionId:", transactionId);
         console.log("Transaction status:", (res as any)?.data?.status);
-        
+
         if (!transactionId) {
           toast.error("Không tìm thấy transaction ID.");
           return;
@@ -395,7 +396,7 @@ export default function Checkout() {
           // Call payWithWallet to complete payment
           console.log("Calling payWithWallet with ID:", transactionId);
           const payRes = await payWithWallet(transactionId);
-          
+
           // Update wallet balance
           try {
             const bal = await getWalletBalance();
@@ -403,8 +404,10 @@ export default function Checkout() {
           } catch {}
 
           // Show success message
-          toast.success(payRes?.message || "Thanh toán cọc bằng ví thành công!");
-          
+          toast.success(
+            payRes?.message || "Thanh toán cọc bằng ví thành công!"
+          );
+
           // Redirect to checkout result page with success status
           setTimeout(
             () =>
