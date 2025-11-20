@@ -68,21 +68,22 @@ function Register() {
       });
       if (response.success) {
         const accessToken = response.data?.accessToken;
-        const user = response.data?.user;
-
         if (accessToken) {
-          // Store access token using JWT's own expiration time
+          // Use JWT's own expiration time for new registrations
           storeAuthToken(accessToken);
-
-          // Store user info if available from response
-          if (user) {
-            // Import storeUserInfo from services
-            const { storeUserInfo } = await import("../../services");
-            storeUserInfo(user);
-            console.log("✅ Stored user info after registration:", user);
+          
+          // Fetch and store user profile (including role) like Google login
+          try {
+            const { getUserProfile, storeUserInfo } = await import('../../services');
+            const profileResponse = await getUserProfile();
+            
+            if (profileResponse.success && profileResponse.data?.user) {
+              storeUserInfo(profileResponse.data.user);
+            }
+          } catch (profileError) {
+            console.error('Failed to fetch user profile after registration:', profileError);
           }
-
-          console.log("🔐 Registration - using JWT expiration");
+          
           toast.success(
             t(
               "auth.register.registerSuccess",

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import colors from "../../Utils/Color";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import { type Vehicle, getCurrentUserId } from "../../services";
 import { GridSkeleton } from "../common/Skeleton";
 import { motion } from "framer-motion";
 
-export default function TopEV() {
+function TopEV() {
   const { t } = useI18nContext();
   const router = useRouter();
   const {
@@ -19,9 +19,9 @@ export default function TopEV() {
   } = useDataContext();
   const [displayVehicles, setDisplayVehicles] = useState<Vehicle[]>([]);
 
-  const handleCarClick = (carId: string) => {
+  const handleCarClick = useCallback((carId: string) => {
     router.push(`/vehicle/${carId}`);
-  };
+  }, [router]);
 
   // Fetch vehicles on mount (will use cache if available)
   useEffect(() => {
@@ -277,3 +277,5 @@ export default function TopEV() {
     </div>
   );
 }
+
+export default memo(TopEV);
