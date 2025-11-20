@@ -193,3 +193,33 @@ export interface Appointment {
     };
   };
 }
+
+export interface Contract {
+  id: string;
+  transactionId: string;
+  buyerId: string;
+  sellerId: string;
+  contractUrl: string;
+  createdAt: string;
+  buyer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  seller: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  transaction: {
+    id: string;
+    finalPrice: number;
+    status: string;
+    vehicle: {
+      title: string;
+    } | null;
+    battery: {
+      title: string;
+    } | null;
+  };
+}
