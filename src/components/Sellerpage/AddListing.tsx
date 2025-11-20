@@ -121,7 +121,9 @@ const Input = ({
                 ? "border-red-400"
                 : "border-blue-100"
             }
-            hover:border-blue-400 ${disabled ? "opacity-60 cursor-not-allowed bg-gray-100" : ""}`}
+            hover:border-blue-400 ${
+              disabled ? "opacity-60 cursor-not-allowed bg-gray-100" : ""
+            }`}
         />
         {translatedError && (
           <p className="mt-2 text-sm text-red-600">{translatedError}</p>
