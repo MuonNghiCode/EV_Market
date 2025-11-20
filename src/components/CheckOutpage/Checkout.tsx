@@ -325,6 +325,7 @@ export default function Checkout() {
 
   const handlePay = async () => {
     if (!termsAccepted) return;
+    if (processing) return; // Prevent double-click
     if (!listingId || !listingType) {
       toast.error(
         "Thiếu thông tin sản phẩm. Vui lòng quay lại trang chi tiết và thử lại."
@@ -342,14 +343,23 @@ export default function Checkout() {
         redirectUrl: `${window.location.origin}/checkout/result`,
       });
 
-      const res = await checkout({
+      // WALLET doesn't need redirectUrl, only MOMO does
+      const checkoutPayload: any = {
         listingId,
         listingType: listingType as "VEHICLE" | "BATTERY",
         paymentMethod: selectedPaymentMethod === "qr" ? "MOMO" : "WALLET",
-        redirectUrl: `${window.location.origin}/checkout/result`,
-      });
+      };
+      
+      // Only add redirectUrl for MOMO
+      if (selectedPaymentMethod === "qr") {
+        checkoutPayload.redirectUrl = `${window.location.origin}/checkout/result`;
+      }
+      
+      const res = await checkout(checkoutPayload);
 
       console.log("Checkout response:", res);
+      console.log("Response data:", JSON.stringify(res?.data, null, 2));
+      console.log("Payment method:", selectedPaymentMethod);
 
       if (selectedPaymentMethod === "qr") {
         // MOMO payment
@@ -369,21 +379,32 @@ export default function Checkout() {
           toast.error("Không tìm thấy liên kết thanh toán MoMo.");
         }
       } else {
-        // WALLET flow: two-step, requires transactionId
-        const transactionId = (res as any)?.data?.transactionId;
+        // WALLET flow: two-step payment required
+        const transactionId = (res as any)?.data?.id || (res as any)?.data?.transactionId;
+        
+        console.log("WALLET checkout response:", res);
+        console.log("Extracted transactionId:", transactionId);
+        console.log("Transaction status:", (res as any)?.data?.status);
+        
         if (!transactionId) {
-          toast.error("Không tìm thấy transactionId để thanh toán ví.");
+          toast.error("Không tìm thấy transaction ID.");
           return;
         }
+
         try {
+          // Call payWithWallet to complete payment
+          console.log("Calling payWithWallet with ID:", transactionId);
           const payRes = await payWithWallet(transactionId);
+          
+          // Update wallet balance
           try {
             const bal = await getWalletBalance();
             setWalletBalance(bal.data?.availableBalance ?? null);
           } catch {}
-          toast.success(
-            payRes?.message || "Thanh toán cọc bằng ví thành công!"
-          );
+
+          // Show success message
+          toast.success(payRes?.message || "Thanh toán cọc bằng ví thành công!");
+          
           // Redirect to checkout result page with success status
           setTimeout(
             () =>
