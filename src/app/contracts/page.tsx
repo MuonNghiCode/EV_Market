@@ -1,6 +1,11 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { getMyContracts, viewContract, downloadContract, isAuthenticated } from "@/services";
+import {
+  getMyContracts,
+  viewContract,
+  downloadContract,
+  isAuthenticated,
+} from "@/services";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import {
@@ -64,7 +69,7 @@ export default function UserContractsPage() {
     if (mounted) {
       // Check authentication
       if (!isAuthenticated()) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
       loadContracts();
