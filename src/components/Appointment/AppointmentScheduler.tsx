@@ -61,10 +61,10 @@ export default function AppointmentScheduler({
       return;
     }
 
-    // Convert to ISO format with timezone (set time to 00:01 by default)
+    // Convert to ISO format with timezone (set time to 15:00 - 3PM)
     const isoDate = proposedDates.map((date) => {
       const d = new Date(date);
-      d.setHours(0, 1, 0, 0); // Set default time to 00:01 (1 minute past midnight)
+      d.setHours(15, 0, 0, 0); // Set time to 15:00 (3 PM)
       return d.toISOString();
     });
 
@@ -91,8 +91,14 @@ export default function AppointmentScheduler({
     }
   };
 
-  // Get minimum date (tomorrow)
+  // Get minimum date (createdAt or tomorrow)
   const getMinDate = () => {
+    if (createdAt) {
+      // Nếu có ngày tạo (ngày cọc), cho phép chọn từ ngày đó
+      const contractDate = new Date(createdAt);
+      return contractDate.toISOString().slice(0, 10);
+    }
+    // Nếu không có, mặc định là ngày mai
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().slice(0, 10);
@@ -130,7 +136,10 @@ export default function AppointmentScheduler({
       <p className="text-gray-600 mb-6">
         Chọn các ngày phù hợp để gặp gỡ và kiểm tra xe trong vòng{" "}
         <strong>7 ngày kể từ ngày ký hợp đồng</strong>. Bên kia sẽ chọn 1 trong
-        các ngày bạn đề xuất.
+        các ngày bạn đề xuất. <br />
+        <span className="text-blue-600 font-medium">
+          Thời gian hẹn: 15:00 (3 giờ chiều)
+        </span>
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
