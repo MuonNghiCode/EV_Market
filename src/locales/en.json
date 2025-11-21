@@ -52,7 +52,8 @@
     "walletManagement": "My Wallet ",
     "currentBalance": "Current Balance",
     "wallet": "My Wallet",
-    "purchaseHistory": "Purchase History"
+    "purchaseHistory": "Purchase History",
+    "contracts": "Contracts"
   },
   "home": {
     "title": "Home",

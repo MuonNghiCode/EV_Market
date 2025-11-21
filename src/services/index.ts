@@ -54,6 +54,9 @@ export {
   getContractByVehicleId,
   getUserContracts,
   deleteContract,
+  getMyContracts,
+  viewContract,
+  downloadContract,
 } from './Contract'
 
 // Export Battery services
