@@ -341,7 +341,11 @@ export default function SellerOrders() {
       <div className="space-y-6">
         <AnimatePresence>
           {transactions.map((transaction, index) => {
-            const product = transaction.vehicle || transaction.battery;
+            // Handle both single product and cart (batteries array)
+            const product =
+              transaction.vehicle ||
+              transaction.battery ||
+              (transaction.batteries && transaction.batteries[0]);
             const productType = transaction.vehicle ? "vehicle" : "battery";
 
             if (!product) return null;
