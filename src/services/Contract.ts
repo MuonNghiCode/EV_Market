@@ -252,10 +252,18 @@ export const deleteContract = async (vehicleId: string): Promise<ContractRespons
 // Get user contracts from API
 export const getMyContracts = async (): Promise<any> => {
   try {
+    // Check if running on client side
+    if (typeof window === 'undefined') {
+      throw new Error('This function can only be called on the client side');
+    }
+
     const token = localStorage.getItem('accessToken');
     if (!token) {
       throw new Error('No authentication token found');
     }
+
+    console.log('Fetching contracts from:', `${API_BASE_URL}/contracts`);
+    console.log('Using token:', token ? 'Token exists' : 'No token');
 
     const response = await fetch(`${API_BASE_URL}/contracts`, {
       method: 'GET',
@@ -265,11 +273,18 @@ export const getMyContracts = async (): Promise<any> => {
       },
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response ok:', response.ok);
+
     if (!response.ok) {
-      throw new Error('Failed to fetch contracts');
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      throw new Error(`Failed to fetch contracts: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log('Parsed response data:', data);
+    console.log('Data structure:', JSON.stringify(data, null, 2));
     return data;
   } catch (error) {
     console.error('Error fetching contracts:', error);
@@ -280,6 +295,10 @@ export const getMyContracts = async (): Promise<any> => {
 // View contract HTML
 export const viewContract = async (contractId: string): Promise<string> => {
   try {
+    if (typeof window === 'undefined') {
+      throw new Error('This function can only be called on the client side');
+    }
+
     const token = localStorage.getItem('accessToken');
     if (!token) {
       throw new Error('No authentication token found');
@@ -307,6 +326,10 @@ export const viewContract = async (contractId: string): Promise<string> => {
 // Download contract PDF
 export const downloadContract = async (contractId: string): Promise<void> => {
   try {
+    if (typeof window === 'undefined') {
+      throw new Error('This function can only be called on the client side');
+    }
+
     const token = localStorage.getItem('accessToken');
     if (!token) {
       throw new Error('No authentication token found');

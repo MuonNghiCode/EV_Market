@@ -1,6 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { getMyContracts, viewContract, downloadContract } from "@/services";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import {
   FileText,
   Download,
@@ -52,22 +54,46 @@ export default function UserContractsPage() {
   const [error, setError] = useState<string | null>(null);
   const [viewingContract, setViewingContract] = useState<string | null>(null);
   const [contractHTML, setContractHTML] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    loadContracts();
+    setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      loadContracts();
+    }
+  }, [mounted]);
 
   const loadContracts = async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await getMyContracts();
+      
+      console.log("Full response:", response);
+      console.log("Response type:", typeof response);
+      console.log("Response data:", response?.data);
 
       if (response && response.data && response.data.contracts) {
+        console.log("Contracts found:", response.data.contracts);
         setContracts(response.data.contracts);
+      } else if (response && Array.isArray(response)) {
+        // Handle case where response is directly an array
+        console.log("Response is array:", response);
+        setContracts(response);
+      } else if (response && response.contracts) {
+        // Handle case where contracts are at top level
+        console.log("Contracts at top level:", response.contracts);
+        setContracts(response.contracts);
+      } else {
+        console.log("No contracts found in response structure");
+        setContracts([]);
       }
     } catch (err) {
       console.error("Failed to load contracts:", err);
+      console.error("Error details:", err instanceof Error ? err.message : err);
       setError("Không thể tải hợp đồng. Vui lòng thử lại sau.");
     } finally {
       setLoading(false);
@@ -144,21 +170,32 @@ export default function UserContractsPage() {
     }
   };
 
+  // Don't render until mounted on client
+  if (!mounted) {
+    return null;
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <>
+        <Header />
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center py-20">
+              <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
           </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
-      <div className="max-w-7xl mx-auto">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 px-4">
+        <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
@@ -382,6 +419,8 @@ export default function UserContractsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+      <Footer />
+    </>
   );
 }
