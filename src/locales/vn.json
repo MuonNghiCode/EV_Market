@@ -48,7 +48,8 @@
     "profile": "Hồ sơ",
     "language": "Ngôn ngữ",
     "walletManagement": "Quản lý ví",
-    "purchaseHistory": "Lịch sử mua hàng"
+    "purchaseHistory": "Lịch sử mua hàng",
+    "contracts": "Hợp đồng"
   },
   "home": {
     "title": "Trang chủ",
