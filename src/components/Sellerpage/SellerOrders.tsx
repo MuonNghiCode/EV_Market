@@ -10,8 +10,10 @@ import {
   getPaymentGatewayName,
 } from "../../services/Transaction";
 import { formatCurrency } from "../../services/Wallet";
+import { downloadContract } from "../../services/Contract";
 import { useToast } from "../../hooks/useToast";
 import Image from "next/image";
+import ViewContractModal from "../common/ViewContractModal";
 import {
   Package,
   TrendingUp,
@@ -37,6 +39,13 @@ export default function SellerOrders() {
   const [shippingTransactionId, setShippingTransactionId] = useState<
     string | null
   >(null);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<
+    string | null
+  >(null);
+  const [downloadingContractId, setDownloadingContractId] = useState<
+    string | null
+  >(null);
 
   // Load seller's sales transactions
   const fetchSales = async (page: number) => {
@@ -46,7 +55,6 @@ export default function SellerOrders() {
 
       const response = await getMySales(page, 10);
 
-      console.log("Sales transactions:", response.data.transactions);
 
       setTransactions(response.data.transactions);
       setTotalPages(response.data.totalPages);
@@ -95,6 +103,34 @@ export default function SellerOrders() {
       );
     } finally {
       setShippingTransactionId(null);
+    }
+  };
+
+  const handleViewContract = (transactionId: string) => {
+    setSelectedTransactionId(transactionId);
+    setShowContractModal(true);
+  };
+
+  const handleDownloadContract = async (transactionId: string) => {
+    try {
+      setDownloadingContractId(transactionId);
+      await downloadContract(transactionId);
+      toast.success(
+        t(
+          "purchaseHistory.downloadContractSuccess",
+          "Contract downloaded successfully!"
+        )
+      );
+    } catch (error) {
+      console.error("Failed to download contract:", error);
+      toast.error(
+        t(
+          "purchaseHistory.downloadContractError",
+          "Failed to download contract. Please try again."
+        )
+      );
+    } finally {
+      setDownloadingContractId(null);
     }
   };
 
@@ -305,13 +341,8 @@ export default function SellerOrders() {
       <div className="space-y-6">
         <AnimatePresence>
           {transactions.map((transaction, index) => {
-            const product =
-              transaction.vehicle ||
-              transaction.battery ||
-              (transaction.batteries && transaction.batteries[0]);
+            const product = transaction.vehicle || transaction.battery;
             const productType = transaction.vehicle ? "vehicle" : "battery";
-            const isCartItem =
-              transaction.batteries && transaction.batteries.length > 0;
 
             if (!product) return null;
 
@@ -353,10 +384,8 @@ export default function SellerOrders() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex-1 min-w-0 pr-4">
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
-                            {isCartItem && transaction.batteries.length > 1
-                              ? `Đơn gộp (${transaction.batteries.length} pin)`
-                              : product.title}
+                          <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 line-clamp-2">
+                            {product.title}
                           </h3>
                           <div className="flex items-center gap-2 flex-wrap">
                             {/* Status Badge */}
@@ -395,9 +424,7 @@ export default function SellerOrders() {
                               {t("seller.orders.buyer", "Buyer")}
                             </p>
                             <p className="text-sm font-bold text-gray-900 truncate">
-                              {transaction.buyer?.name ||
-                                transaction.buyerId ||
-                                "N/A"}
+                              {transaction.buyerId || "N/A"}
                             </p>
                           </div>
                         </div>
@@ -449,48 +476,88 @@ export default function SellerOrders() {
                         </div>
                       </div>
 
-                      {/* Cart Items - Show all batteries when multiple */}
-                      {isCartItem && transaction.batteries.length > 1 && (
-                        <div className="mt-4 border border-gray-200 rounded-xl p-4 bg-gray-50">
-                          <h4 className="font-semibold text-gray-900 mb-3 text-sm">
-                            {t(
-                              "seller.orders.cartItems",
-                              "Các pin trong đơn hàng:"
-                            )}
-                          </h4>
-                          <div className="space-y-2">
-                            {transaction.batteries.map((battery, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center gap-3 bg-white rounded-lg p-3"
-                              >
-                                <div className="relative w-12 h-12 flex-shrink-0 bg-gray-100 rounded overflow-hidden">
-                                  <Image
-                                    src={
-                                      battery.images[0] || "/placeholder.png"
-                                    }
-                                    alt={battery.title}
-                                    fill
-                                    className="object-cover"
-                                    unoptimized
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-gray-900 text-sm truncate">
-                                    {battery.title}
-                                  </p>
-                                </div>
-                                <div className="text-sm font-semibold text-gray-700">
-                                  {idx + 1}/{transaction.batteries.length}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
                       {/* Action Buttons */}
-                      <div className="flex items-center justify-end gap-3">
+                      <div className="flex items-center justify-end gap-3 flex-wrap">
+                        {/* Contract Buttons - Available for all orders */}
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => handleViewContract(transaction.id)}
+                          className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold flex items-center gap-2 shadow-lg"
+                        >
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                            />
+                          </svg>
+                          <span>
+                            {t(
+                              "purchaseHistory.viewContract",
+                              "View Contract"
+                            )}
+                          </span>
+                        </motion.button>
+
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() =>
+                            handleDownloadContract(transaction.id)
+                          }
+                          disabled={
+                            downloadingContractId === transaction.id
+                          }
+                          className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all font-bold flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {downloadingContractId === transaction.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                              <span>
+                                {t(
+                                  "purchaseHistory.generatingContract",
+                                  "Generating..."
+                                )}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                />
+                              </svg>
+                              <span>
+                                {t(
+                                  "purchaseHistory.downloadContract",
+                                  "Download Contract"
+                                )}
+                              </span>
+                            </>
+                          )}
+                        </motion.button>
+
                         {transaction.status === "PAID" && (
                           <motion.button
                             whileHover={{ scale: 1.02 }}
@@ -573,6 +640,19 @@ export default function SellerOrders() {
             {t("seller.orders.next", "Next")}
           </motion.button>
         </motion.div>
+      )}
+
+      {/* View Contract Modal */}
+      {selectedTransactionId && (
+        <ViewContractModal
+          isOpen={showContractModal}
+          onClose={() => {
+            setShowContractModal(false);
+            setSelectedTransactionId(null);
+          }}
+          transactionId={selectedTransactionId}
+          onDownload={() => handleDownloadContract(selectedTransactionId)}
+        />
       )}
     </motion.div>
   );

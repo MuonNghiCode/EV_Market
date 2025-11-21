@@ -844,7 +844,12 @@
     "productType": {
       "vehicle": "Vehicle",
       "battery": "Battery"
-    }
+    },
+    "viewContract": "View Contract",
+    "downloadContract": "Download Contract",
+    "generatingContract": "Generating contract...",
+    "viewContractError": "Failed to view contract. Please try again.",
+    "downloadContractError": "Failed to download contract. Please try again."
   },
   "batteryDetail": {
     "technicalSpecifications": "Technical Specifications",

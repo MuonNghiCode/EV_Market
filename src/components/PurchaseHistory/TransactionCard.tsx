@@ -10,8 +10,10 @@ import {
   disputeTransaction,
 } from "../../services/Transaction";
 import { formatCurrency } from "../../services/Wallet";
+import { downloadContract } from "../../services/Contract";
 import { useToast } from "../../hooks/useToast";
 import Image from "next/image";
+import ViewContractModal from "../common/ViewContractModal";
 
 interface TransactionCardProps {
   transaction: Transaction;
@@ -29,6 +31,8 @@ export default function TransactionCard({
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeImages, setDisputeImages] = useState<File[]>([]);
   const [isDisputing, setIsDisputing] = useState(false);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [isDownloadingContract, setIsDownloadingContract] = useState(false);
 
   // Handle both single battery and multiple batteries from cart
   const product =
@@ -155,6 +159,33 @@ export default function TransactionCard({
 
   const removeImage = (index: number) => {
     setDisputeImages(disputeImages.filter((_, i) => i !== index));
+  };
+
+  const handleViewContract = () => {
+    setShowContractModal(true);
+  };
+
+  const handleDownloadContract = async () => {
+    try {
+      setIsDownloadingContract(true);
+      await downloadContract(transaction.id);
+      toast.success(
+        t(
+          "purchaseHistory.downloadContractSuccess",
+          "Contract downloaded successfully!"
+        )
+      );
+    } catch (error) {
+      console.error("Failed to download contract:", error);
+      toast.error(
+        t(
+          "purchaseHistory.downloadContractError",
+          "Failed to download contract. Please try again."
+        )
+      );
+    } finally {
+      setIsDownloadingContract(false);
+    }
   };
 
   return (
@@ -361,6 +392,73 @@ export default function TransactionCard({
               </>
             )}
 
+            {/* Contract Buttons - Available for all transactions */}
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleViewContract}
+              className="flex-1 px-5 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-base font-semibold flex items-center justify-center gap-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+              </svg>
+              <span>
+                {t("purchaseHistory.viewContract", "View Contract")}
+              </span>
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleDownloadContract}
+              disabled={isDownloadingContract}
+              className="flex-1 px-5 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all text-base font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDownloadingContract ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>
+                    {t("purchaseHistory.generatingContract", "Generating...")}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  <span>
+                    {t("purchaseHistory.downloadContract", "Download Contract")}
+                  </span>
+                </>
+              )}
+            </motion.button>
+
             {/* Write Review Button - Only show when COMPLETED and no review */}
             {transaction.status === "COMPLETED" && !transaction.review && (
               <motion.button
@@ -565,6 +663,14 @@ export default function TransactionCard({
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* View Contract Modal */}
+      <ViewContractModal
+        isOpen={showContractModal}
+        onClose={() => setShowContractModal(false)}
+        transactionId={transaction.id}
+        onDownload={handleDownloadContract}
+      />
     </motion.div>
   );
 }

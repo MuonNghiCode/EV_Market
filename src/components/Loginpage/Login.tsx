@@ -50,11 +50,9 @@ function Login() {
         if (rememberMe) {
           // If remember me is checked, let JWT expiration handle it
           storeAuthToken(token);
-          console.log('🔐 Remember me enabled - using JWT expiration');
         } else {
           // If remember me is NOT checked, limit session to 1 hour
           storeAuthToken(token, 1);
-          console.log('🔐 Remember me disabled - session limited to 1 hour');
         }
         
         // Get user info from response.data.user if available

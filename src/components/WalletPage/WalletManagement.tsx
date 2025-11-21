@@ -43,7 +43,6 @@ function WalletManagement() {
   };
 
   const handleWithdraw = () => {
-    console.log("Withdraw clicked");
     // Implement withdraw logic
   };
 

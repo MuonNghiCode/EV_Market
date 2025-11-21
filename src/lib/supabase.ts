@@ -17,7 +17,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Debug: Log Realtime connection status
 if (typeof window !== 'undefined') {
-  console.log('🔧 Supabase Client initialized');
-  console.log('📍 Supabase URL:', supabaseUrl);
-  console.log('🔌 Realtime enabled:', !!supabase.realtime);
+
 }
