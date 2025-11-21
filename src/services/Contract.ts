@@ -1,4 +1,5 @@
 // Contract service for managing vehicle sale contracts
+import { getAuthToken } from './Auth'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_ENDPOINT || 'https://evmarket-api-staging-backup.onrender.com/api/v1'
 
@@ -257,7 +258,7 @@ export const getMyContracts = async (): Promise<any> => {
       throw new Error('This function can only be called on the client side');
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAuthToken();
     if (!token) {
       throw new Error('No authentication token found');
     }
@@ -299,7 +300,7 @@ export const viewContract = async (contractId: string): Promise<string> => {
       throw new Error('This function can only be called on the client side');
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAuthToken();
     if (!token) {
       throw new Error('No authentication token found');
     }
@@ -330,7 +331,7 @@ export const downloadContract = async (contractId: string): Promise<void> => {
       throw new Error('This function can only be called on the client side');
     }
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAuthToken();
     if (!token) {
       throw new Error('No authentication token found');
     }
