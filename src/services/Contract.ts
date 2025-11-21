@@ -293,8 +293,8 @@ export const getMyContracts = async (): Promise<any> => {
   }
 }
 
-// View contract HTML
-export const viewContract = async (contractId: string): Promise<string> => {
+// View contract HTML - opens in new tab
+export const viewContract = async (contractId: string): Promise<void> => {
   try {
     if (typeof window === 'undefined') {
       throw new Error('This function can only be called on the client side');
@@ -305,7 +305,16 @@ export const viewContract = async (contractId: string): Promise<string> => {
       throw new Error('No authentication token found');
     }
 
-    const response = await fetch(`${API_BASE_URL}/contracts/${contractId}/view`, {
+    // Open URL directly with authorization in new tab
+    const url = `${API_BASE_URL}/contracts/${contractId}/view`;
+    const newWindow = window.open('', '_blank');
+    
+    if (!newWindow) {
+      throw new Error('Popup blocked. Please allow popups for this site.');
+    }
+
+    // Fetch and display HTML in the new window
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -313,11 +322,13 @@ export const viewContract = async (contractId: string): Promise<string> => {
     });
 
     if (!response.ok) {
+      newWindow.close();
       throw new Error('Failed to view contract');
     }
 
     const html = await response.text();
-    return html;
+    newWindow.document.write(html);
+    newWindow.document.close();
   } catch (error) {
     console.error('Error viewing contract:', error);
     throw error;

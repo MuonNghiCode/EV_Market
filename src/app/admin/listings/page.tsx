@@ -65,11 +65,9 @@ function ListingsManagementPage() {
       setLoading(true);
       // Load data với limit hợp lý
       const response = await getListings(1, 100); // Giảm xuống 100
-      console.log("API Response:", response);
 
       if (response.success && response.data) {
-        console.log("Listings data:", response.data.listings);
-        console.log("Total listings:", response.data.listings.length);
+    
 
         // Sắp xếp theo thời gian MỚI NHẤT lên đầu (b - a để ngày mới lên trước)
         const sortedListings = [...response.data.listings].sort(
@@ -80,7 +78,6 @@ function ListingsManagementPage() {
           }
         );
 
-        console.log("Sorted listings:", sortedListings.length);
         setAllListings(sortedListings);
       } else {
         console.error("API returned no data:", response);

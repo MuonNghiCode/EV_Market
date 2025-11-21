@@ -813,7 +813,12 @@
     "productType": {
       "vehicle": "Xe điện",
       "battery": "Pin"
-    }
+    },
+    "viewContract": "Xem Hợp Đồng",
+    "downloadContract": "Tải Hợp Đồng",
+    "generatingContract": "Đang tạo hợp đồng...",
+    "viewContractError": "Không thể xem hợp đồng. Vui lòng thử lại.",
+    "downloadContractError": "Không thể tải hợp đồng. Vui lòng thử lại."
   },
   "sellerProfile": {
     "verifiedSeller": "Người bán đã xác minh",
