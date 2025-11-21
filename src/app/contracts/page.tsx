@@ -62,7 +62,7 @@ export default function UserContractsPage() {
       setLoading(true);
       setError(null);
       const response = await getMyContracts();
-      
+
       if (response && response.data && response.data.contracts) {
         setContracts(response.data.contracts);
       }
@@ -191,7 +191,8 @@ export default function UserContractsPage() {
               Chưa có hợp đồng
             </h3>
             <p className="text-gray-600 mb-6">
-              Bạn chưa có hợp đồng mua bán nào. Hãy bắt đầu mua hoặc bán xe điện!
+              Bạn chưa có hợp đồng mua bán nào. Hãy bắt đầu mua hoặc bán xe
+              điện!
             </p>
             <button
               onClick={() => router.push("/browse")}
