@@ -21,6 +21,7 @@ export interface AppointmentBattery {
 export interface AppointmentTransaction {
   id: string;
   status: string;
+  type?: "SALE" | "AUCTION";
   vehicle?: AppointmentVehicle;
   battery?: AppointmentBattery;
 }
