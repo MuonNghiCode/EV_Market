@@ -1,5 +1,6 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -49,7 +50,7 @@ interface AuctionDetailPageProps {
 const formatDateTime = (dateString: string) => {
   const date = new Date(dateString);
   // Browser automatically converts UTC to local timezone
-  
+
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -169,7 +170,7 @@ export default function AuctionDetailPage({
   const { t } = useI18nContext();
   const router = useRouter();
   const { success: showSuccess, error: showError } = useToast();
-
+  const hasReloaded = useRef(false);
   const [auction, setAuction] = useState<LiveAuction | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState({
@@ -191,7 +192,9 @@ export default function AuctionDetailPage({
   const [isNewBidFlash, setIsNewBidFlash] = useState(false);
   const [isAutoBidEnabled, setIsAutoBidEnabled] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"WALLET" | "MOMO">("WALLET");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "WALLET" | "MOMO"
+  >("WALLET");
 
   const [activeTab, setActiveTab] = useState<"details" | "specs" | "bids">(
     "details"
@@ -253,8 +256,6 @@ export default function AuctionDetailPage({
             String(highestBid + auctionData.bidIncrement)
           );
           setHasDeposit(hasDeposit);
-
-     
         }
       } catch (error) {
         showError(
@@ -297,37 +298,27 @@ export default function AuctionDetailPage({
   // Auto-reload when auction ends to show winner checkout button
   useEffect(() => {
     if (!auction) return;
-    
-    // Check if auction just expired
-    if (timeLeft.isExpired && timeLeft.total <= 0) {
+    // Chỉ reload 1 lần duy nhất cho mỗi phiên đấu giá
+    const reloadKey = `auctionReloaded_${auction.id}`;
+    const alreadyReloaded = window.sessionStorage.getItem(reloadKey);
+    if (timeLeft.isExpired && timeLeft.total <= 0 && !alreadyReloaded) {
       const startTime = new Date(auction.auctionStartsAt);
       const now = new Date();
-      
-      // Only reload if auction has started (not just waiting to start)
       if (now >= startTime) {
-        // Reload after 2 seconds to allow animation to complete
-        const reloadTimer = setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-        
-        return () => clearTimeout(reloadTimer);
+        window.sessionStorage.setItem(reloadKey, "true");
+        window.location.reload();
       }
     }
   }, [timeLeft.isExpired, timeLeft.total, auction]);
 
   // Realtime bidding subscription
   useEffect(() => {
-   
-
     if (!auction) {
       return;
     }
 
- 
-
     // Save listing type for client-side filtering
     const listingType = auction.listingType;
-
 
     // Create a channel with server-side filtering
     const channel = supabase
@@ -340,13 +331,11 @@ export default function AuctionDetailPage({
           table: "Bid",
         },
         (payload) => {
-
           const newBid = payload.new as any;
 
           // Update current bid with the new bid amount
           if (newBid && typeof newBid.amount === "number") {
             const newBidAmount = newBid.amount;
-
 
             setCurrentBid(newBidAmount);
 
@@ -355,13 +344,21 @@ export default function AuctionDetailPage({
             setTimeout(() => setIsNewBidFlash(false), 2000);
 
             // Auto-bid logic: if enabled and not our own bid, automatically place next bid
-            if (isAutoBidEnabled && hasDeposit && newBid.bidderId !== currentUserId && auction && auction.listingType) {
+            if (
+              isAutoBidEnabled &&
+              hasDeposit &&
+              newBid.bidderId !== currentUserId &&
+              auction &&
+              auction.listingType
+            ) {
               const nextBidAmount = newBidAmount + auction.bidIncrement;
-              
+
               // Place bid automatically after a short delay
               setTimeout(async () => {
                 try {
-                  await placeBid(auction.listingType!, auction.id, { amount: nextBidAmount });
+                  await placeBid(auction.listingType!, auction.id, {
+                    amount: nextBidAmount,
+                  });
                 } catch (error) {
                   console.error("❌ Auto-bid failed:", error);
                   // Silently fail - user can still manually bid
@@ -399,9 +396,7 @@ export default function AuctionDetailPage({
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
-        
         } else if (status === "CHANNEL_ERROR") {
-       
         } else if (status === "TIMED_OUT") {
         } else if (status === "CLOSED") {
         }
@@ -411,7 +406,13 @@ export default function AuctionDetailPage({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [auctionId, auction?.listingType, isAutoBidEnabled, hasDeposit, currentUserId]); // Depend on auctionId, listingType, and auto-bid state
+  }, [
+    auctionId,
+    auction?.listingType,
+    isAutoBidEnabled,
+    hasDeposit,
+    currentUserId,
+  ]); // Depend on auctionId, listingType, and auto-bid state
 
   const handlePayDeposit = async () => {
     if (!auction || !auction.listingType) return;
@@ -527,16 +528,25 @@ export default function AuctionDetailPage({
     }
   };
 
-  const handlePayAuction = async (transactionId: string, paymentMethod: "WALLET" | "MOMO") => {
+  const handlePayAuction = async (
+    transactionId: string,
+    paymentMethod: "WALLET" | "MOMO"
+  ) => {
     try {
       setIsPayingAuction(true);
 
       // Get the pending transaction for this auction
-      const itemType = auction?.listingType === "VEHICLE" ? "vehicle" : "battery";
-      const transaction = await getPendingAuctionTransaction(auctionId, itemType);
-      
+      const itemType =
+        auction?.listingType === "VEHICLE" ? "vehicle" : "battery";
+      const transaction = await getPendingAuctionTransaction(
+        auctionId,
+        itemType
+      );
+
       if (!transaction) {
-        showError(t("auctions.errors.transactionNotFound", "Không tìm thấy giao dịch"));
+        showError(
+          t("auctions.errors.transactionNotFound", "Không tìm thấy giao dịch")
+        );
         return;
       }
 
@@ -596,12 +606,13 @@ export default function AuctionDetailPage({
 
       if (response.data?.transaction) {
         showSuccess(
-          response.message || t(
-            "auctions.buyNowSuccess",
-            "Mua đứt thành công! Giao dịch đã được hoàn tất."
-          )
+          response.message ||
+            t(
+              "auctions.buyNowSuccess",
+              "Mua đứt thành công! Giao dịch đã được hoàn tất."
+            )
         );
-        
+
         // Refresh auction details to show SOLD status and buyer info
         const { data } = await getAuctionDetail(auction.listingType, auctionId);
         setAuction(data);
@@ -620,10 +631,7 @@ export default function AuctionDetailPage({
         errorMessage.toLowerCase().includes("balance")
       ) {
         showError(
-          t(
-            "auctions.errors.insufficientBalance",
-            "Số dư không đủ để mua đứt"
-          ),
+          t("auctions.errors.insufficientBalance", "Số dư không đủ để mua đứt"),
           6000,
           t("auctions.errors.goToWallet", "Nạp tiền"),
           () => router.push("/wallet")
@@ -649,8 +657,6 @@ export default function AuctionDetailPage({
     <div className="min-h-screen pt-25 w-full bg-transparent">
       {/* Compact Header */}
       <div className="max-w-[1600px] mx-auto px-4 sm:px-8 pt-6 pb-4">
-
-
         <div className="flex items-center gap-3">
           <motion.div
             className="px-4 py-1.5 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold rounded-full shadow-lg flex items-center gap-1.5"
@@ -760,7 +766,9 @@ export default function AuctionDetailPage({
                     {t("browse.productType", "Type")}
                   </p>
                   <p className="text-base font-bold text-slate-900">
-                    {isVehicle ? t("browse.vehicles", "Vehicle") : t("browse.batteries", "Battery")}
+                    {isVehicle
+                      ? t("browse.vehicles", "Vehicle")
+                      : t("browse.batteries", "Battery")}
                   </p>
                 </motion.div>
               </div>
@@ -875,18 +883,21 @@ export default function AuctionDetailPage({
                     {auction.bids && auction.bids.length > 0 ? (
                       <>
                         <p className="text-sm text-slate-500 mb-3">
-                          {t(
-                            "auctions.topBidders",
-                            "Top 5 Highest Bidders"
-                          )}
+                          {t("auctions.topBidders", "Top 5 Highest Bidders")}
                         </p>
                         {(() => {
                           // Group bids by bidderId and get highest bid for each user
-                          const bidderMap = new Map<string, typeof auction.bids[0]>();
-                          
+                          const bidderMap = new Map<
+                            string,
+                            (typeof auction.bids)[0]
+                          >();
+
                           auction.bids.forEach((bid) => {
                             const existingBid = bidderMap.get(bid.bidderId);
-                            if (!existingBid || bid.amount > existingBid.amount) {
+                            if (
+                              !existingBid ||
+                              bid.amount > existingBid.amount
+                            ) {
                               bidderMap.set(bid.bidderId, bid);
                             }
                           });
@@ -908,7 +919,7 @@ export default function AuctionDetailPage({
                                   rankBg: "bg-yellow-500",
                                   rankText: "text-white",
                                   priceColor: "text-yellow-600",
-                                  shadow: "0 6px 16px rgba(234, 179, 8, 0.2)"
+                                  shadow: "0 6px 16px rgba(234, 179, 8, 0.2)",
                                 };
                               case 2:
                                 return {
@@ -919,7 +930,8 @@ export default function AuctionDetailPage({
                                   rankBg: "bg-slate-400",
                                   rankText: "text-white",
                                   priceColor: "text-slate-600",
-                                  shadow: "0 4px 12px rgba(148, 163, 184, 0.15)"
+                                  shadow:
+                                    "0 4px 12px rgba(148, 163, 184, 0.15)",
                                 };
                               case 3:
                                 return {
@@ -930,7 +942,7 @@ export default function AuctionDetailPage({
                                   rankBg: "bg-orange-500",
                                   rankText: "text-white",
                                   priceColor: "text-orange-600",
-                                  shadow: "0 4px 12px rgba(249, 115, 22, 0.15)"
+                                  shadow: "0 4px 12px rgba(249, 115, 22, 0.15)",
                                 };
                               default:
                                 return {
@@ -941,7 +953,7 @@ export default function AuctionDetailPage({
                                   rankBg: "bg-blue-500",
                                   rankText: "text-white",
                                   priceColor: "text-blue-600",
-                                  shadow: "0 4px 12px rgba(59, 130, 246, 0.1)"
+                                  shadow: "0 4px 12px rgba(59, 130, 246, 0.1)",
                                 };
                             }
                           };
@@ -949,14 +961,17 @@ export default function AuctionDetailPage({
                           return topBids.map((bid, idx) => {
                             const rank = idx + 1;
                             const style = getRankStyle(rank);
-                            
+
                             return (
                               <motion.div
                                 key={bid.id}
                                 className={`flex items-center justify-between p-3 rounded-xl border-2 shadow-sm ${style.bg} ${style.border}`}
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                transition={{
+                                  duration: 0.3,
+                                  delay: idx * 0.05,
+                                }}
                                 whileHover={{
                                   scale: 1.02,
                                   boxShadow: style.shadow,
@@ -970,19 +985,25 @@ export default function AuctionDetailPage({
                                   >
                                     {rank}
                                   </motion.div>
-                                  
+
                                   {/* User Avatar/Icon */}
                                   <motion.div
                                     className={`w-9 h-9 rounded-full flex items-center justify-center ${style.iconBg}`}
                                     whileHover={{ scale: 1.1 }}
                                   >
-                                    <User className={`w-4 h-4 ${style.iconColor}`} />
+                                    <User
+                                      className={`w-4 h-4 ${style.iconColor}`}
+                                    />
                                   </motion.div>
-                                  
+
                                   {/* User Info */}
                                   <div>
                                     <p className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                                      {bid.bidder?.name || t("auctions.anonymousBidder", "Anonymous Bidder")}
+                                      {bid.bidder?.name ||
+                                        t(
+                                          "auctions.anonymousBidder",
+                                          "Anonymous Bidder"
+                                        )}
                                       {rank === 1 && (
                                         <span className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500 text-white text-xs font-bold rounded-full">
                                           <CheckCircle className="w-3 h-3" />
@@ -991,13 +1012,18 @@ export default function AuctionDetailPage({
                                       )}
                                     </p>
                                     <p className="text-xs text-slate-500">
-                                      {t("auctions.highestUserBid", "Highest bid")}
+                                      {t(
+                                        "auctions.highestUserBid",
+                                        "Highest bid"
+                                      )}
                                     </p>
                                   </div>
                                 </div>
-                                
+
                                 {/* Bid Amount */}
-                                <p className={`text-base font-bold ${style.priceColor}`}>
+                                <p
+                                  className={`text-base font-bold ${style.priceColor}`}
+                                >
                                   {formatAuctionPrice(bid.amount)}
                                 </p>
                               </motion.div>
@@ -1080,7 +1106,7 @@ export default function AuctionDetailPage({
               transition={{ duration: 0.5, delay: 0.1 }}
             >
               {/* Countdown Timer - Hide when SOLD */}
-              {auction.status !== 'SOLD' && (
+              {auction.status !== "SOLD" && (
                 <AuctionCountdownTimer
                   timeLeft={timeLeft}
                   auctionStartsAt={auction.auctionStartsAt}
@@ -1119,4 +1145,3 @@ export default function AuctionDetailPage({
     </div>
   );
 }
-
