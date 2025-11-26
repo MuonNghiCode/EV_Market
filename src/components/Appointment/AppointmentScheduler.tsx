@@ -137,9 +137,9 @@ export default function AppointmentScheduler({
         Chọn các ngày phù hợp để gặp gỡ và kiểm tra xe trong vòng{" "}
         <strong>7 ngày kể từ ngày ký hợp đồng</strong>. Bên kia sẽ chọn 1 trong
         các ngày bạn đề xuất. <br />
-        <span className="text-blue-600 font-medium">
+        {/* <span className="text-blue-600 font-medium">
           Thời gian hẹn: 15:00 (3 giờ chiều)
-        </span>
+        </span> */}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">

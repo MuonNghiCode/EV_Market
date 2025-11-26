@@ -71,9 +71,11 @@ export async function proposeAppointmentDate(
       throw new Error('Authentication required');
     }
 
-    if (proposedDates.length !== 3) {
-      throw new Error('Exactly 3 proposed dates are required');
-    }
+
+      if (proposedDates.length < 1) {
+        throw new Error('Phải đề xuất ít nhất 1 ngày');
+      }
+
 
     const payload: ProposeDatePayload = {
       proposedDates
