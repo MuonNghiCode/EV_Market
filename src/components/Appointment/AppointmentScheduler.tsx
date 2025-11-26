@@ -64,7 +64,7 @@ export default function AppointmentScheduler({
     // Convert to ISO format with timezone (set time to 15:00 - 3PM)
     const isoDate = proposedDates.map((date) => {
       const d = new Date(date);
-      d.setHours(22, 26, 0, 0); // Set time to 22:26 (10:26 PM)
+      d.setHours(18, 68, 0, 0); // Set time to 00:15 (12:15 AM)
       return d.toISOString();
     });
 

@@ -244,7 +244,7 @@ export default function CheckoutResultPage() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Số tiền:</span>
                   <span className="font-semibold text-green-600">
-                    {Number(searchParams.get("amount") || 0).toLocaleString()}{" "}
+                    {Number(searchParams.get("amount") || 0).toLocaleString()}
                     VNĐ
                   </span>
                 </div>

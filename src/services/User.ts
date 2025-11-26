@@ -147,12 +147,9 @@ export const getUserProfile = async (): Promise<UserProfileResponse> => {
     
     const token = getAuthToken()
     
-
-    
     if (!token) {
       throw new Error('No authentication token found')
     }
-    
     
     const response = await fetch(`${API_BASE_URL}/users/me`, {
       method: 'GET',
@@ -162,11 +159,8 @@ export const getUserProfile = async (): Promise<UserProfileResponse> => {
       },
       credentials: 'include' // Include cookies
     })
-
     
     const data = await handleApiResponse(response)
-    
-  
     
     return {
       success: true,
